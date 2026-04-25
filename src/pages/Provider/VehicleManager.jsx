@@ -18,7 +18,10 @@ import {
   Activity,
   ClipboardList,
   Eye,
-  CheckCircle
+  CheckCircle,
+  Search,
+  Filter,
+  Download
 } from 'lucide-react'
 
 function VehicleManager() {
@@ -28,6 +31,10 @@ function VehicleManager() {
   const [fleet, setFleet] = useState([])
   const [editingVehicle, setEditingVehicle] = useState(null)
   const [viewingVehicle, setViewingVehicle] = useState(null)
+
+  // Filter States
+  const [searchTerm, setSearchTerm] = useState('')
+  const [statusFilter, setStatusFilter] = useState('')
 
   useEffect(() => {
     const savedFleet = JSON.parse(localStorage.getItem('myVehicles') || '[]')
@@ -126,6 +133,18 @@ function VehicleManager() {
     setFleet(savedFleet.length > 0 ? savedFleet : defaults)
   }, [])
 
+  const filteredFleet = fleet.filter(vehicle => {
+    const matchesSearch = 
+      vehicle.name?.toLowerCase().includes(searchTerm.toLowerCase()) || 
+      vehicle.plate?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      vehicle.brand?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      vehicle.assignedDriver?.toLowerCase().includes(searchTerm.toLowerCase());
+    
+    const matchesStatus = statusFilter ? vehicle.status === statusFilter : true;
+    
+    return matchesSearch && matchesStatus;
+  })
+
   const openEdit = (v) => {
     setEditingVehicle(v)
     setShowForm(true)
@@ -181,6 +200,35 @@ function VehicleManager() {
       setFleet(updated)
       alert(editingVehicle ? 'Vehicle Updated!' : 'Vehicle Added!')
     }, 800)
+  }
+
+  const handleExport = () => {
+    const headers = ['Plate', 'Name', 'Brand', 'Type', 'Fuel', 'Capacity', 'Insurance Exp', 'Permit Exp', 'Pollution Exp', 'Current KM', 'Driver', 'Status'];
+    const rows = filteredFleet.map(v => [
+      v.plate,
+      v.name,
+      v.brand,
+      v.type,
+      v.fuelType,
+      v.capacity,
+      v.insuranceExpiryDate,
+      v.permitExpiryDate,
+      v.pollutionExpiryDate,
+      v.currentKm,
+      v.assignedDriver,
+      v.status
+    ]);
+
+    const csvContent = "data:text/csv;charset=utf-8," 
+      + [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
+    
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    link.setAttribute("download", `Fleet_Report_${new Date().toISOString().slice(0,10)}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
   }
 
   return (
@@ -244,6 +292,19 @@ function VehicleManager() {
 
         @keyframes fadeIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
         .animate-fade-in { animation: fadeIn 0.4s cubic-bezier(0, 0, 0.2, 1); }
+
+        .filter-bar { background: #fff; padding: 1.5rem; border-radius: 20px; border: 1px solid #e2e8f0; margin-bottom: 2rem; display: flex; gap: 1.5rem; align-items: flex-end; flex-wrap: wrap; box-shadow: 0 4px 12px rgba(0,0,0,0.02); }
+        .filter-group { display: flex; flex-direction: column; gap: 0.5rem; flex: 1; min-width: 250px; }
+        .filter-group label { font-size: 0.75rem; font-weight: 800; color: #64748b; text-transform: uppercase; letter-spacing: 0.05em; display: flex; align-items: center; gap: 0.4rem; }
+        .filter-input-wrap { position: relative; }
+        .filter-input-wrap svg { position: absolute; left: 1rem; top: 50%; transform: translateY(-50%); color: #94a3b8; }
+        .filter-input-wrap input, .filter-input-wrap select { width: 100%; padding: 0.8rem 1rem 0.8rem 2.8rem; border-radius: 12px; border: 1.5px solid #f1f5f9; background: #f8fafc; font-weight: 700; outline: none; transition: 0.2s; font-family: inherit; }
+        .filter-input-wrap input:focus, .filter-input-wrap select:focus { border-color: #3b82f6; background: #fff; box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.05); }
+        .btn-clear { background: #f1f5f9; color: #64748b; padding: 0.8rem 1.2rem; border-radius: 12px; font-weight: 800; border: none; cursor: pointer; transition: 0.2s; height: 48px; }
+        .btn-clear:hover { background: #e2e8f0; color: #0f172a; }
+
+        .btn-download { background: #0f172a; color: #fff; padding: 0.8rem 1.2rem; border-radius: 12px; font-weight: 800; border: none; cursor: pointer; transition: 0.2s; height: 48px; display: flex; align-items: center; gap: 0.6rem; }
+        .btn-download:hover { background: #1e293b; transform: translateY(-2px); box-shadow: 0 4px 12px rgba(15, 23, 42, 0.2); }
       `}</style>
 
       <div className="manager-container">
@@ -256,6 +317,35 @@ function VehicleManager() {
             <Plus size={22} /> Add New Vehicle
           </button>
         </header>
+
+        <div className="filter-bar">
+          <div className="filter-group">
+            <label><Search size={14} /> Search Fleet</label>
+            <div className="filter-input-wrap">
+              <Search size={18} />
+              <input 
+                type="text" 
+                placeholder="Name, plate or driver..." 
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+              />
+            </div>
+          </div>
+          <div className="filter-group">
+            <label><Filter size={14} /> Vehicle Status</label>
+            <div className="filter-input-wrap">
+              <Filter size={18} />
+              <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
+                <option value="">All Statuses</option>
+                <option value="Active">Active</option>
+                <option value="On Trip">On Trip</option>
+                <option value="Maintenance">Maintenance</option>
+              </select>
+            </div>
+          </div>
+          <button className="btn-clear" onClick={() => { setSearchTerm(''); setStatusFilter(''); }}>Clear</button>
+          <button className="btn-download" onClick={handleExport}><Download size={18} /> Export CSV</button>
+        </div>
 
         <div className="table-card">
           <table className="m-table">
@@ -276,7 +366,7 @@ function VehicleManager() {
               </tr>
             </thead>
             <tbody>
-              {fleet.map(v => (
+              {filteredFleet.map(v => (
                 <tr key={v.id}>
                   <td><span style={{background:'#f8fafc', padding:'0.4rem 0.6rem', borderRadius:'6px', border:'1px solid #e2e8f0', fontFamily:'monospace', fontWeight:800}}>{v.plate}</span></td>
                   <td>
@@ -305,10 +395,10 @@ function VehicleManager() {
                   </td>
                 </tr>
               ))}
-              {fleet.length === 0 && (
+              {filteredFleet.length === 0 && (
                 <tr>
                   <td colSpan="14" style={{textAlign:'center', padding:'4rem', color:'#64748b'}}>
-                    No vehicles in fleet. Add your first vehicle to start tracking.
+                    No matching vehicles found. Try adjusting your filters.
                   </td>
                 </tr>
               )}

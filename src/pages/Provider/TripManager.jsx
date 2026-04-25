@@ -22,7 +22,10 @@ import {
   Clock,
   FileText,
   Eye,
-  Activity
+  Activity,
+  Search,
+  Filter,
+  Download
 } from 'lucide-react'
 
 function TripManager() {
@@ -32,6 +35,11 @@ function TripManager() {
   const [trips, setTrips] = useState([])
   const [editingTrip, setEditingTrip] = useState(null)
   const [viewingTrip, setViewingTrip] = useState(null)
+  
+  // Filter States
+  const [searchTerm, setSearchTerm] = useState('')
+  const [dateFilter, setDateFilter] = useState('')
+  const [statusFilter, setStatusFilter] = useState('')
 
   useEffect(() => {
     const savedTrips = JSON.parse(localStorage.getItem('myTrips') || '[]')
@@ -190,6 +198,20 @@ function TripManager() {
     setTrips(savedTrips.length > 0 ? savedTrips : defaults)
   }, [])
 
+  const filteredTrips = trips.filter(trip => {
+    const matchesSearch = 
+      trip.driverName?.toLowerCase().includes(searchTerm.toLowerCase()) || 
+      trip.vehicleNumber?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      trip.companyClientName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      trip.fromLocation?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      trip.toLocation?.toLowerCase().includes(searchTerm.toLowerCase());
+    
+    const matchesDate = dateFilter ? trip.date === dateFilter : true;
+    const matchesStatus = statusFilter ? trip.tripStatus === statusFilter : true;
+    
+    return matchesSearch && matchesDate && matchesStatus;
+  })
+
   const openEdit = (t) => {
     setEditingTrip(t)
     setShowForm(true)
@@ -281,6 +303,37 @@ function TripManager() {
     }, 800)
   }
 
+  const handleExport = () => {
+    const headers = ['Date', 'Driver', 'Vehicle', 'Client', 'From', 'To', 'Total KM', 'Diesel', 'Maint.', 'Other', 'Total Advance', 'Rent', 'Profit', 'Status'];
+    const rows = filteredTrips.map(t => [
+      t.date,
+      t.driverName,
+      t.vehicleNumber,
+      t.companyClientName,
+      t.fromLocation,
+      t.toLocation,
+      t.totalKm,
+      t.dieselExpense,
+      t.maintenanceExpense,
+      t.otherExpense,
+      t.totalAdvance,
+      t.goodsRent,
+      t.profitAmount,
+      t.tripStatus
+    ]);
+
+    const csvContent = "data:text/csv;charset=utf-8," 
+      + [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
+    
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    link.setAttribute("download", `Trips_Report_${new Date().toISOString().slice(0,10)}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  }
+
   return (
     <main className="manager-page-content">
       <style>{`
@@ -338,6 +391,19 @@ function TripManager() {
 
         @keyframes fadeIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
         .animate-fade-in { animation: fadeIn 0.4s cubic-bezier(0, 0, 0.2, 1); }
+
+        .filter-bar { background: #fff; padding: 1.5rem; border-radius: 20px; border: 1px solid #e2e8f0; margin-bottom: 2rem; display: flex; gap: 1.5rem; align-items: flex-end; flex-wrap: wrap; box-shadow: 0 4px 12px rgba(0,0,0,0.02); }
+        .filter-group { display: flex; flex-direction: column; gap: 0.5rem; flex: 1; min-width: 200px; }
+        .filter-group label { font-size: 0.75rem; font-weight: 800; color: #64748b; text-transform: uppercase; letter-spacing: 0.05em; display: flex; align-items: center; gap: 0.4rem; }
+        .filter-input-wrap { position: relative; }
+        .filter-input-wrap svg { position: absolute; left: 1rem; top: 50%; transform: translateY(-50%); color: #94a3b8; }
+        .filter-input-wrap input, .filter-input-wrap select { width: 100%; padding: 0.8rem 1rem 0.8rem 2.8rem; border-radius: 12px; border: 1.5px solid #f1f5f9; background: #f8fafc; font-weight: 700; outline: none; transition: 0.2s; font-family: inherit; }
+        .filter-input-wrap input:focus, .filter-input-wrap select:focus { border-color: #3b82f6; background: #fff; box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.05); }
+        .btn-clear { background: #f1f5f9; color: #64748b; padding: 0.8rem 1.2rem; border-radius: 12px; font-weight: 800; border: none; cursor: pointer; transition: 0.2s; height: 48px; }
+        .btn-clear:hover { background: #e2e8f0; color: #0f172a; }
+
+        .btn-download { background: #0f172a; color: #fff; padding: 0.8rem 1.2rem; border-radius: 12px; font-weight: 800; border: none; cursor: pointer; transition: 0.2s; height: 48px; display: flex; align-items: center; gap: 0.6rem; }
+        .btn-download:hover { background: #1e293b; transform: translateY(-2px); box-shadow: 0 4px 12px rgba(15, 23, 42, 0.2); }
       `}</style>
 
       <div className="manager-container">
@@ -350,6 +416,46 @@ function TripManager() {
             <Plus size={22} /> Log New Trip
           </button>
         </header>
+
+        <div className="filter-bar">
+          <div className="filter-group">
+            <label><Search size={14} /> Search Records</label>
+            <div className="filter-input-wrap">
+              <Search size={18} />
+              <input 
+                type="text" 
+                placeholder="Driver, vehicle or route..." 
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+              />
+            </div>
+          </div>
+          <div className="filter-group">
+            <label><Calendar size={14} /> Trip Date</label>
+            <div className="filter-input-wrap">
+              <Calendar size={18} />
+              <input 
+                type="date" 
+                value={dateFilter}
+                onChange={(e) => setDateFilter(e.target.value)}
+              />
+            </div>
+          </div>
+          <div className="filter-group">
+            <label><Filter size={14} /> Status</label>
+            <div className="filter-input-wrap">
+              <Filter size={18} />
+              <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
+                <option value="">All Statuses</option>
+                <option value="Completed">Completed</option>
+                <option value="Active">Active</option>
+                <option value="Cancelled">Cancelled</option>
+              </select>
+            </div>
+          </div>
+          <button className="btn-clear" onClick={() => { setSearchTerm(''); setDateFilter(''); setStatusFilter(''); }}>Clear</button>
+          <button className="btn-download" onClick={handleExport}><Download size={18} /> Export CSV</button>
+        </div>
 
         <div className="table-card">
           <table className="m-table">
@@ -371,7 +477,7 @@ function TripManager() {
               </tr>
             </thead>
             <tbody>
-              {trips.map(trip => (
+              {filteredTrips.map(trip => (
                 <tr key={trip.id}>
                   <td style={{whiteSpace:'nowrap'}}>{trip.date}</td>
                   <td style={{fontWeight:800}}>{trip.companyClientName}</td>
@@ -405,10 +511,10 @@ function TripManager() {
                   </td>
                 </tr>
               ))}
-              {trips.length === 0 && (
+              {filteredTrips.length === 0 && (
                 <tr>
                   <td colSpan="13" style={{textAlign:'center', padding:'4rem', color:'#64748b'}}>
-                    No trip records found. Start logging your fleet movements.
+                    No matching trip records found. Try adjusting your filters.
                   </td>
                 </tr>
               )}

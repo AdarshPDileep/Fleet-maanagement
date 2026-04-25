@@ -16,7 +16,10 @@ import {
   Clock,
   DollarSign,
   Eye,
-  CheckCircle
+  CheckCircle,
+  Search,
+  Filter,
+  Download
 } from 'lucide-react'
 
 function DriverManager() {
@@ -26,6 +29,11 @@ function DriverManager() {
   const [drivers, setDrivers] = useState([])
   const [editingDriver, setEditingDriver] = useState(null)
   const [viewingDriver, setViewingDriver] = useState(null)
+
+  // Filter States
+  const [searchTerm, setSearchTerm] = useState('')
+  const [dateFilter, setDateFilter] = useState('')
+  const [statusFilter, setStatusFilter] = useState('')
 
   useEffect(() => {
     const savedDrivers = JSON.parse(localStorage.getItem('myDrivers') || '[]')
@@ -104,6 +112,18 @@ function DriverManager() {
     setDrivers(savedDrivers.length > 0 ? savedDrivers : defaults)
   }, [])
 
+  const filteredDrivers = drivers.filter(driver => {
+    const matchesSearch = 
+      driver.name?.toLowerCase().includes(searchTerm.toLowerCase()) || 
+      driver.phone?.includes(searchTerm) ||
+      driver.license?.toLowerCase().includes(searchTerm.toLowerCase());
+    
+    const matchesDate = dateFilter ? driver.joiningDate === dateFilter : true;
+    const matchesStatus = statusFilter ? driver.status === statusFilter : true;
+    
+    return matchesSearch && matchesDate && matchesStatus;
+  })
+
   const openEdit = (driver) => {
     setEditingDriver(driver)
     setShowForm(true)
@@ -155,6 +175,31 @@ function DriverManager() {
       setDrivers(updated)
       alert(editingDriver ? 'Driver Profile Updated!' : 'Driver Registered!')
     }, 800)
+  }
+
+  const handleExport = () => {
+    const headers = ['Name', 'Phone', 'License', 'License Exp', 'Joining Date', 'Type', 'Batta', 'Status'];
+    const rows = filteredDrivers.map(d => [
+      d.name,
+      d.phone,
+      d.license,
+      d.licenseExpiryDate,
+      d.joiningDate,
+      d.driverType,
+      d.dailyBatta,
+      d.status
+    ]);
+
+    const csvContent = "data:text/csv;charset=utf-8," 
+      + [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
+    
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    link.setAttribute("download", `Drivers_Report_${new Date().toISOString().slice(0,10)}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
   }
 
   return (
@@ -210,6 +255,19 @@ function DriverManager() {
 
         @keyframes fadeIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
         .animate-fade-in { animation: fadeIn 0.4s cubic-bezier(0, 0, 0.2, 1); }
+
+        .filter-bar { background: #fff; padding: 1.5rem; border-radius: 20px; border: 1px solid #e2e8f0; margin-bottom: 2rem; display: flex; gap: 1.5rem; align-items: flex-end; flex-wrap: wrap; box-shadow: 0 4px 12px rgba(0,0,0,0.02); }
+        .filter-group { display: flex; flex-direction: column; gap: 0.5rem; flex: 1; min-width: 200px; }
+        .filter-group label { font-size: 0.75rem; font-weight: 800; color: #64748b; text-transform: uppercase; letter-spacing: 0.05em; display: flex; align-items: center; gap: 0.4rem; }
+        .filter-input-wrap { position: relative; }
+        .filter-input-wrap svg { position: absolute; left: 1rem; top: 50%; transform: translateY(-50%); color: #94a3b8; }
+        .filter-input-wrap input, .filter-input-wrap select { width: 100%; padding: 0.8rem 1rem 0.8rem 2.8rem; border-radius: 12px; border: 1.5px solid #f1f5f9; background: #f8fafc; font-weight: 700; outline: none; transition: 0.2s; font-family: inherit; }
+        .filter-input-wrap input:focus, .filter-input-wrap select:focus { border-color: #3b82f6; background: #fff; box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.05); }
+        .btn-clear { background: #f1f5f9; color: #64748b; padding: 0.8rem 1.2rem; border-radius: 12px; font-weight: 800; border: none; cursor: pointer; transition: 0.2s; height: 48px; }
+        .btn-clear:hover { background: #e2e8f0; color: #0f172a; }
+
+        .btn-download { background: #0f172a; color: #fff; padding: 0.8rem 1.2rem; border-radius: 12px; font-weight: 800; border: none; cursor: pointer; transition: 0.2s; height: 48px; display: flex; align-items: center; gap: 0.6rem; }
+        .btn-download:hover { background: #1e293b; transform: translateY(-2px); box-shadow: 0 4px 12px rgba(15, 23, 42, 0.2); }
       `}</style>
 
       <div className="manager-container">
@@ -222,6 +280,47 @@ function DriverManager() {
             <Plus size={22} /> Add New Driver
           </button>
         </header>
+
+        <div className="filter-bar">
+          <div className="filter-group">
+            <label><Search size={14} /> Search Drivers</label>
+            <div className="filter-input-wrap">
+              <Search size={18} />
+              <input 
+                type="text" 
+                placeholder="Name, phone or license..." 
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+              />
+            </div>
+          </div>
+          <div className="filter-group">
+            <label><Calendar size={14} /> Joining Date</label>
+            <div className="filter-input-wrap">
+              <Calendar size={18} />
+              <input 
+                type="date" 
+                value={dateFilter}
+                onChange={(e) => setDateFilter(e.target.value)}
+              />
+            </div>
+          </div>
+          <div className="filter-group">
+            <label><Filter size={14} /> Status</label>
+            <div className="filter-input-wrap">
+              <Filter size={18} />
+              <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
+                <option value="">All Statuses</option>
+                <option value="Approved">Approved</option>
+                <option value="Pending">Pending</option>
+                <option value="Active">Active</option>
+                <option value="Inactive">Inactive</option>
+              </select>
+            </div>
+          </div>
+          <button className="btn-clear" onClick={() => { setSearchTerm(''); setDateFilter(''); setStatusFilter(''); }}>Clear</button>
+          <button className="btn-download" onClick={handleExport}><Download size={18} /> Export CSV</button>
+        </div>
 
         <div className="table-card">
           <table className="m-table">
@@ -240,7 +339,7 @@ function DriverManager() {
               </tr>
             </thead>
             <tbody>
-              {drivers.map(driver => (
+              {filteredDrivers.map(driver => (
                 <tr key={driver.id}>
                   <td>
                     <div style={{display:'flex', alignItems:'center', gap:'0.8rem'}}>
@@ -274,10 +373,10 @@ function DriverManager() {
                   </td>
                 </tr>
               ))}
-              {drivers.length === 0 && (
+              {filteredDrivers.length === 0 && (
                 <tr>
                   <td colSpan="10" style={{textAlign:'center', padding:'4rem', color:'#64748b'}}>
-                    No drivers found. Register your first driver to get started.
+                    No matching drivers found. Try adjusting your filters.
                   </td>
                 </tr>
               )}
