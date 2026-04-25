@@ -219,7 +219,12 @@ function VehicleManager() {
 
   const handleExport = () => {
     const headers = ['Plate', 'Name', 'Brand', 'Type', 'Fuel', 'Capacity', 'Insurance Exp', 'Permit Exp', 'Pollution Exp', 'Current KM', 'Driver', 'Status'];
-    const rows = filteredFleet.map(v => [
+    
+    const dataToExport = selectedVehicles.length > 0 
+      ? fleet.filter(v => selectedVehicles.includes(v.id)) 
+      : filteredFleet;
+
+    const rows = dataToExport.map(v => [
       v.plate,
       v.name,
       v.brand,
@@ -398,7 +403,7 @@ function VehicleManager() {
               <Plus size={22} /> Add New Vehicle
             </button>
             <button className="btn-download" onClick={handleExport} style={{height: '40px', padding: '0.6rem 1.2rem', fontSize: '0.85rem'}}>
-              <Download size={16} /> Export Fleet List
+              <Download size={16} /> {selectedVehicles.length > 0 ? `Export Selected (${selectedVehicles.length})` : 'Export CSV Report'}
             </button>
           </div>
         </header>

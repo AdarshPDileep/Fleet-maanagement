@@ -322,7 +322,12 @@ function TripManager() {
 
   const handleExport = () => {
     const headers = ['Date', 'Driver', 'Vehicle', 'Client', 'From', 'To', 'Total KM', 'Diesel', 'Maint.', 'Other', 'Total Advance', 'Rent', 'Profit', 'Status'];
-    const rows = filteredTrips.map(t => [
+    
+    const dataToExport = selectedTrips.length > 0 
+      ? trips.filter(t => selectedTrips.includes(t.id)) 
+      : filteredTrips;
+
+    const rows = dataToExport.map(t => [
       t.date,
       t.driverName,
       t.vehicleNumber,
@@ -535,7 +540,7 @@ function TripManager() {
               <Plus size={22} /> Log New Trip
             </button>
             <button className="btn-download" onClick={handleExport} style={{height: '40px', padding: '0.6rem 1.2rem', fontSize: '0.85rem'}}>
-              <Download size={16} /> Export CSV Report
+              <Download size={16} /> {selectedTrips.length > 0 ? `Export Selected (${selectedTrips.length})` : 'Export CSV Report'}
             </button>
           </div>
         </header>

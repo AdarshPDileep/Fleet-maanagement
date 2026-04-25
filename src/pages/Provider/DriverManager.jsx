@@ -194,7 +194,12 @@ function DriverManager() {
 
   const handleExport = () => {
     const headers = ['Name', 'Phone', 'License', 'License Exp', 'Joining Date', 'Type', 'Batta', 'Status'];
-    const rows = filteredDrivers.map(d => [
+    
+    const dataToExport = selectedDrivers.length > 0 
+      ? drivers.filter(d => selectedDrivers.includes(d.id)) 
+      : filteredDrivers;
+
+    const rows = dataToExport.map(d => [
       d.name,
       d.phone,
       d.license,
@@ -365,7 +370,7 @@ function DriverManager() {
               <Plus size={22} /> Add New Driver
             </button>
             <button className="btn-download" onClick={handleExport} style={{height: '40px', padding: '0.6rem 1.2rem', fontSize: '0.85rem'}}>
-              <Download size={16} /> Export Driver List
+              <Download size={16} /> {selectedDrivers.length > 0 ? `Export Selected (${selectedDrivers.length})` : 'Export CSV Report'}
             </button>
           </div>
         </header>
