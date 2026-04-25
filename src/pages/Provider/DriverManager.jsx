@@ -34,6 +34,7 @@ function DriverManager() {
   const [searchTerm, setSearchTerm] = useState('')
   const [dateFilter, setDateFilter] = useState('')
   const [statusFilter, setStatusFilter] = useState('')
+  const [selectedDrivers, setSelectedDrivers] = useState([])
 
   useEffect(() => {
     const savedDrivers = JSON.parse(localStorage.getItem('myDrivers') || '[]')
@@ -121,8 +122,22 @@ function DriverManager() {
     const matchesDate = dateFilter ? driver.joiningDate === dateFilter : true;
     const matchesStatus = statusFilter ? driver.status === statusFilter : true;
     
-    return matchesSearch && matchesDate && matchesStatus;
+    return matchesSearch && matchesStatus && matchesDate;
   })
+
+  const toggleSelectAll = () => {
+    if (selectedDrivers.length === filteredDrivers.length) {
+      setSelectedDrivers([]);
+    } else {
+      setSelectedDrivers(filteredDrivers.map(d => d.id));
+    }
+  };
+
+  const toggleSelectDriver = (id) => {
+    setSelectedDrivers(prev => 
+      prev.includes(id) ? prev.filter(item => item !== id) : [...prev, id]
+    );
+  };
 
   const openEdit = (driver) => {
     setEditingDriver(driver)
@@ -202,6 +217,34 @@ function DriverManager() {
     document.body.removeChild(link);
   }
 
+  const handleExportSingle = (d) => {
+    const headers = ['Field', 'Value'];
+    const data = [
+      ['Name', d.name],
+      ['Phone', d.phone],
+      ['Alt. Phone', d.alternateNumber],
+      ['License Number', d.license],
+      ['License Expiry', d.licenseExpiryDate],
+      ['Address', d.address],
+      ['Driver Type', d.driverType],
+      ['Daily Batta', d.dailyBatta],
+      ['Joining Date', d.joiningDate],
+      ['Status', d.status],
+      ['Notes', d.notes]
+    ];
+
+    const csvContent = "data:text/csv;charset=utf-8," 
+      + [headers.join(','), ...data.map(r => r.join(','))].join('\n');
+    
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    link.setAttribute("download", `Driver_${d.name.replace(/\s+/g, '_')}_Details.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  }
+
   return (
     <main className="manager-page-content">
       <style>{`
@@ -213,48 +256,89 @@ function DriverManager() {
         .btn-add { background: #22c55e; color: #fff; padding: 0.9rem 1.8rem; border-radius: 14px; font-weight: 800; display: flex; align-items: center; gap: 0.6rem; border: none; cursor: pointer; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); box-shadow: 0 4px 12px rgba(34, 197, 94, 0.2); }
         .btn-add:hover { transform: translateY(-3px); box-shadow: 0 12px 24px rgba(34, 197, 94, 0.3); background: #16a34a; }
 
-        .table-card { background: #fff; border-radius: 28px; border: 1px solid #e2e8f0; overflow: hidden; box-shadow: 0 10px 30px rgba(0,0,0,0.04); }
+        /* ── Table ── */
+        .table-card { background: #fff; border-radius: 20px; border: 1px solid #e2e8f0; overflow: hidden; box-shadow: 0 4px 24px rgba(0,0,0,0.05); }
         .m-table { width: 100%; border-collapse: collapse; text-align: left; }
-        .m-table th { background: #f8fafc; padding: 1.5rem; font-size: 0.8rem; font-weight: 800; color: #64748b; text-transform: uppercase; letter-spacing: 0.05em; border-bottom: 2px solid #f1f5f9; }
-        .m-table td { padding: 1.5rem; border-bottom: 1px solid #f1f5f9; font-weight: 600; color: #1e293b; }
-        .m-table tr:hover td { background: #fcfdfe; }
-        
-        .status-pill { padding: 0.5rem 1rem; border-radius: 99px; font-size: 0.75rem; font-weight: 800; display: inline-flex; align-items: center; gap: 0.4rem; }
-        .s-approved { background: #dcfce7; color: #166534; }
-        .s-pending { background: #fef9c3; color: #854d0e; }
-        .s-inactive { background: #fee2e2; color: #991b1b; }
+        .m-table thead tr { background: linear-gradient(135deg, #0f172a, #1e293b); }
+        .m-table th { padding: 1rem 1rem; font-size: 0.65rem; font-weight: 700; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.08em; white-space: nowrap; border: none; }
+        .m-table th:first-child { padding-left: 1.5rem; }
+        .m-table th:last-child { padding-right: 1.5rem; }
+        .m-table tbody tr { transition: background 0.15s; }
+        .m-table tbody tr:nth-child(odd) { background: #fff; }
+        .m-table tbody tr:nth-child(even) { background: #fafbfc; }
+        .m-table tbody tr:nth-child(even) { background: #fafbfc; }
+        .m-table tbody tr:hover { background: #f0fdf4; }
+        .m-table tbody tr.selected-row { background: #f0fdf4; }
+        .m-table td { padding: 1rem 1rem; border-bottom: 1px solid #f1f5f9; font-weight: 600; color: #1e293b; font-size: 0.85rem; }
+        .m-table td:first-child { padding-left: 1.5rem; }
+        .m-table td:last-child { padding-right: 1.5rem; }
+        .m-table tbody tr:last-child td { border-bottom: none; }
 
-        .action-btns { display: flex; gap: 0.75rem; }
-        .icon-btn { width: 38px; height: 38px; border-radius: 12px; border: 1px solid #e2e8f0; display: grid; place-items: center; cursor: pointer; transition: all 0.2s; background: #fff; color: #64748b; }
-        .icon-btn:hover { border-color: #0f172a; color: #0f172a; background: #f8fafc; transform: scale(1.05); }
+        .status-pill { padding: 0.3rem 0.8rem; border-radius: 6px; font-size: 0.68rem; font-weight: 800; display: inline-flex; align-items: center; gap: 0.4rem; text-transform: uppercase; letter-spacing: 0.04em; }
+        .s-approved { background: #dcfce7; color: #15803d; }
+        .s-pending { background: #fef9c3; color: #92400e; }
+        .s-inactive { background: #fee2e2; color: #b91c1c; }
+
+        /* Checkbox Style */
+        .m-checkbox {
+          width: 18px;
+          height: 18px;
+          cursor: pointer;
+          accent-color: #22c55e;
+          border-radius: 4px;
+        }
+
+        .action-btns { display: flex; gap: 0.4rem; }
+        .icon-btn { width: 32px; height: 32px; border-radius: 8px; border: 1px solid #e2e8f0; display: grid; place-items: center; cursor: pointer; transition: all 0.15s; background: #fff; color: #94a3b8; }
+        .icon-btn:hover { border-color: #22c55e; color: #22c55e; background: #f0fdf4; }
         .icon-btn.delete:hover { border-color: #ef4444; color: #ef4444; background: #fef2f2; }
-        .icon-btn.view:hover { border-color: #3b82f6; color: #3b82f6; background: #eff6ff; }
+        .icon-btn.view:hover { border-color: #6366f1; color: #6366f1; background: #eef2ff; }
 
-        .form-overlay, .detail-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(15, 23, 42, 0.4); backdrop-filter: blur(12px); display: grid; place-items: center; z-index: 1000; padding: 2rem; }
-        .form-card, .detail-card { background: #fff; border-radius: 36px; width: 100%; max-width: 900px; padding: 4rem; position: relative; max-height: 92vh; overflow-y: auto; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25); }
-        .close-btn { position: absolute; top: 2.5rem; right: 2.5rem; background: #f1f5f9; border: none; width: 44px; height: 44px; border-radius: 50%; font-weight: 900; cursor: pointer; display: grid; place-items: center; transition: 0.2s; }
-        .close-btn:hover { background: #e2e8f0; transform: rotate(90deg); }
+        .animate-fade-in { animation: fadeIn 0.3s cubic-bezier(0.16, 1, 0.3, 1); }
 
-        .form-grid, .detail-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 1.75rem; }
-        .form-section-title, .detail-section-title { grid-column: span 2; font-size: 1.1rem; font-weight: 800; color: #0f172a; margin: 1rem 0 0.5rem; padding-bottom: 0.5rem; border-bottom: 2px solid #f1f5f9; display: flex; align-items: center; gap: 0.5rem; }
-        
-        .detail-item { background: #f8fafc; padding: 1.2rem; border-radius: 16px; border: 1px solid #f1f5f9; }
-        .detail-label { font-size: 0.7rem; font-weight: 800; color: #94a3b8; text-transform: uppercase; margin-bottom: 0.4rem; display: block; }
-        .detail-value { font-size: 1.05rem; font-weight: 800; color: #1e293b; }
+        .form-overlay, .detail-overlay { position: fixed; inset: 0; background: rgba(2, 8, 23, 0.7); backdrop-filter: blur(10px); display: flex; align-items: center; justify-content: center; z-index: 1000; padding: 1.5rem; }
+        .form-card, .detail-card { background: #fff; border-radius: 28px; width: 100%; max-width: 900px; position: relative; max-height: 93vh; overflow: hidden; display: flex; flex-direction: column; box-shadow: 0 40px 80px -20px rgba(0,0,0,0.5); }
+
+        .modal-header { padding: 2rem 2.5rem 1.5rem; border-bottom: 1px solid #f1f5f9; flex-shrink: 0; display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; }
+        .modal-header-left { display: flex; flex-direction: column; gap: 0.3rem; }
+        .modal-header-eyebrow { display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.5rem; }
+        .modal-header-eyebrow .modal-icon { width: 40px; height: 40px; border-radius: 12px; display: grid; place-items: center; }
+        .modal-icon-blue { background: linear-gradient(135deg, #3b82f6, #2563eb); color: #fff; }
+        .modal-icon-green { background: linear-gradient(135deg, #22c55e, #16a34a); color: #fff; }
+        .modal-title { font-size: 1.7rem; font-weight: 900; color: #0f172a; letter-spacing: -0.03em; }
+        .modal-subtitle { font-size: 0.9rem; color: #64748b; font-weight: 500; }
+        .close-btn { flex-shrink: 0; background: #f8fafc; border: 1px solid #e2e8f0; width: 38px; height: 38px; border-radius: 10px; display: grid; place-items: center; cursor: pointer; transition: all 0.2s; color: #64748b; }
+        .close-btn:hover { background: #fee2e2; color: #ef4444; border-color: #fecaca; transform: rotate(90deg); }
+
+        .modal-body { overflow-y: auto; padding: 2rem 2.5rem; flex: 1; }
+        .modal-body::-webkit-scrollbar { width: 5px; }
+        .modal-body::-webkit-scrollbar-thumb { background: #e2e8f0; border-radius: 99px; }
+
+        .form-grid, .detail-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 1.25rem; }
+        .form-section-title, .detail-section-title { grid-column: span 2; font-size: 0.75rem; font-weight: 800; color: #22c55e; text-transform: uppercase; letter-spacing: 0.08em; margin: 1.5rem 0 0.25rem; padding: 0 0 0.6rem; border-bottom: 1px solid #e2e8f0; display: flex; align-items: center; gap: 0.6rem; }
+
+        .detail-item { background: #f8fafc; padding: 1rem 1.1rem; border-radius: 12px; border: 1px solid #f1f5f9; transition: all 0.15s; }
+        .detail-item:hover { border-color: #dcfce7; background: #f0fdf4; }
+        .detail-label { font-size: 0.68rem; font-weight: 700; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 0.35rem; display: flex; align-items: center; gap: 0.3rem; }
+        .detail-value { font-size: 1rem; font-weight: 800; color: #0f172a; }
         .detail-item.full { grid-column: span 2; }
-        .form-group { display: flex; flex-direction: column; gap: 0.6rem; }
+
+        .form-group { display: flex; flex-direction: column; gap: 0.45rem; }
         .form-group.full { grid-column: span 2; }
-        .form-group label { font-size: 0.85rem; font-weight: 800; color: #475569; display: flex; align-items: center; gap: 0.4rem; }
-        .form-group input, .form-group select, .form-group textarea { padding: 1.1rem 1.4rem; border-radius: 14px; border: 2px solid #f1f5f9; font-weight: 700; outline: none; transition: 0.2s; font-family: inherit; }
-        .form-group input:focus, .form-group select:focus, .form-group textarea:focus { border-color: #22c55e; box-shadow: 0 0 0 4px rgba(34, 197, 94, 0.1); }
+        .form-group label { font-size: 0.78rem; font-weight: 700; color: #64748b; display: flex; align-items: center; gap: 0.35rem; }
+        .form-group input, .form-group select, .form-group textarea { padding: 0.8rem 1rem; border-radius: 10px; border: 1.5px solid #e2e8f0; font-weight: 600; outline: none; transition: all 0.18s; font-family: inherit; color: #0f172a; background: #fff; font-size: 0.9rem; }
+        .form-group input::placeholder { color: #cbd5e1; font-weight: 500; }
+        .form-group input:focus, .form-group select:focus, .form-group textarea:focus { border-color: #22c55e; box-shadow: 0 0 0 3px rgba(34,197,94,0.12); background: #fff; }
         .form-group textarea { min-height: 100px; resize: vertical; }
 
-        .btn-save { grid-column: span 2; background: #0f172a; color: #fff; padding: 1.4rem; border-radius: 18px; font-weight: 900; margin-top: 2rem; cursor: pointer; border: none; font-size: 1.1rem; letter-spacing: 0.02em; transition: 0.3s; }
-        .btn-save:hover { background: #1e293b; transform: translateY(-2px); box-shadow: 0 10px 25px rgba(15, 23, 42, 0.2); }
-        .btn-save:disabled { opacity: 0.7; cursor: not-allowed; }
-
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
-        .animate-fade-in { animation: fadeIn 0.4s cubic-bezier(0, 0, 0.2, 1); }
+        .modal-footer { padding: 1.25rem 2.5rem 1.75rem; border-top: 1px solid #f1f5f9; display: flex; gap: 0.75rem; flex-shrink: 0; }
+        .btn-save { background: #0f172a; color: #fff; padding: 0.85rem 1.8rem; border-radius: 12px; font-weight: 700; cursor: pointer; border: none; font-size: 0.9rem; transition: all 0.2s; display: flex; align-items: center; gap: 0.5rem; flex: 1; justify-content: center; }
+        .btn-save:hover { background: #1e293b; transform: translateY(-1px); box-shadow: 0 8px 20px rgba(15,23,42,0.2); }
+        .btn-save:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
+        .btn-save.green { background: linear-gradient(135deg, #22c55e, #16a34a); }
+        .btn-save.green:hover { box-shadow: 0 8px 20px rgba(34,197,94,0.25); }
+        .btn-save.secondary { background: #f1f5f9; color: #475569; box-shadow: none; }
+        .btn-save.secondary:hover { background: #e2e8f0; color: #0f172a; transform: none; box-shadow: none; }
 
         .filter-bar { background: #fff; padding: 1.5rem; border-radius: 20px; border: 1px solid #e2e8f0; margin-bottom: 2rem; display: flex; gap: 1.5rem; align-items: flex-end; flex-wrap: wrap; box-shadow: 0 4px 12px rgba(0,0,0,0.02); }
         .filter-group { display: flex; flex-direction: column; gap: 0.5rem; flex: 1; min-width: 200px; }
@@ -276,9 +360,14 @@ function DriverManager() {
             <h1>Driver Network</h1>
             <p style={{color:'#64748b', fontWeight:600, marginTop:'0.4rem'}}>Manage your professional driving staff</p>
           </div>
-          <button className="btn-add" onClick={() => { setEditingDriver(null); setShowForm(true); }}>
-            <Plus size={22} /> Add New Driver
-          </button>
+          <div style={{display: 'flex', flexDirection: 'column', gap: '0.8rem', alignItems: 'flex-end'}}>
+            <button className="btn-add" onClick={() => { setEditingDriver(null); setShowForm(true); }}>
+              <Plus size={22} /> Add New Driver
+            </button>
+            <button className="btn-download" onClick={handleExport} style={{height: '40px', padding: '0.6rem 1.2rem', fontSize: '0.85rem'}}>
+              <Download size={16} /> Export Driver List
+            </button>
+          </div>
         </header>
 
         <div className="filter-bar">
@@ -319,13 +408,20 @@ function DriverManager() {
             </div>
           </div>
           <button className="btn-clear" onClick={() => { setSearchTerm(''); setDateFilter(''); setStatusFilter(''); }}>Clear</button>
-          <button className="btn-download" onClick={handleExport}><Download size={18} /> Export CSV</button>
         </div>
 
         <div className="table-card">
           <table className="m-table">
             <thead>
               <tr>
+                <th style={{ width: '40px' }}>
+                  <input 
+                    type="checkbox" 
+                    className="m-checkbox" 
+                    checked={filteredDrivers.length > 0 && selectedDrivers.length === filteredDrivers.length}
+                    onChange={toggleSelectAll}
+                  />
+                </th>
                 <th>Driver Name</th>
                 <th>Phone Number</th>
                 <th>Alt. Phone</th>
@@ -340,7 +436,15 @@ function DriverManager() {
             </thead>
             <tbody>
               {filteredDrivers.map(driver => (
-                <tr key={driver.id}>
+                <tr key={driver.id} className={selectedDrivers.includes(driver.id) ? 'selected-row' : ''}>
+                  <td>
+                    <input 
+                      type="checkbox" 
+                      className="m-checkbox" 
+                      checked={selectedDrivers.includes(driver.id)}
+                      onChange={() => toggleSelectDriver(driver.id)}
+                    />
+                  </td>
                   <td>
                     <div style={{display:'flex', alignItems:'center', gap:'0.8rem'}}>
                       <div style={{width:40, height:40, borderRadius:'12px', background:'#f1f5f9', display:'grid', placeItems:'center', color:'#64748b'}}>
@@ -389,16 +493,19 @@ function DriverManager() {
       {viewingDriver && (
         <div className="detail-overlay" onClick={() => setViewingDriver(null)}>
           <div className="detail-card animate-fade-in" onClick={e => e.stopPropagation()}>
-            <button className="close-btn" onClick={() => setViewingDriver(null)}><X size={24} /></button>
-            <div style={{marginBottom:'3rem'}}>
-              <div style={{display:'flex', alignItems:'center', gap:'1rem', marginBottom:'0.5rem'}}>
-                <span className={`status-pill ${viewingDriver.status === 'Approved' || viewingDriver.status === 'Active' ? 's-approved' : 's-pending'}`}>{viewingDriver.status}</span>
-                <span style={{fontSize:'0.9rem', color:'#94a3b8', fontWeight:800}}>DRIVER ID: {viewingDriver.id}</span>
+            <div className="modal-header">
+              <div className="modal-header-left">
+                <div className="modal-header-eyebrow">
+                  <div className="modal-icon modal-icon-green"><User size={18}/></div>
+                  <span className={`status-pill ${viewingDriver.status === 'Approved' || viewingDriver.status === 'Active' ? 's-approved' : 's-pending'}`}>{viewingDriver.status}</span>
+                  <span style={{fontSize:'0.8rem', color:'#94a3b8', fontWeight:700, letterSpacing:'0.05em'}}>ID: {viewingDriver.id}</span>
+                </div>
+                <div className="modal-title">{viewingDriver.name}</div>
+                <div className="modal-subtitle">Professional Driver Profile</div>
               </div>
-              <h2 style={{fontSize:'2.4rem', fontWeight:900, color:'#0f172a'}}>{viewingDriver.name}</h2>
-              <p style={{color:'#64748b', fontWeight:600}}>Professional Driver Profile</p>
+              <button className="close-btn" onClick={() => setViewingDriver(null)}><X size={18}/></button>
             </div>
-
+            <div className="modal-body">
             <div className="detail-grid">
               <div className="detail-section-title"><User size={18}/> Personal & Contact</div>
               <div className="detail-item">
@@ -448,10 +555,11 @@ function DriverManager() {
                 <div className="detail-value">{viewingDriver.notes || 'No special notes.'}</div>
               </div>
             </div>
-            
-            <div style={{marginTop:'3rem', display:'flex', gap:'1rem'}}>
-              <button className="btn-save" onClick={() => { setViewingDriver(null); openEdit(viewingDriver); }}>Edit Profile</button>
-              <button className="btn-save" style={{background:'#f1f5f9', color:'#64748b'}} onClick={() => setViewingDriver(null)}>Close</button>
+            </div>{/* end modal-body */}
+            <div className="modal-footer">
+              <button className="btn-save" style={{flex:2}} onClick={() => { setViewingDriver(null); openEdit(viewingDriver); }}><Edit size={16}/> Edit Profile</button>
+              <button className="btn-save green" style={{flex:1}} onClick={() => handleExportSingle(viewingDriver)}><Download size={16}/> Export</button>
+              <button className="btn-save secondary" style={{flex:1}} onClick={() => setViewingDriver(null)}>Close</button>
             </div>
           </div>
         </div>
@@ -460,13 +568,21 @@ function DriverManager() {
       {showForm && (
         <div className="form-overlay">
           <div className="form-card animate-fade-in">
-            <button className="close-btn" onClick={() => setShowForm(false)}><X size={24} /></button>
-            <div style={{marginBottom:'2.5rem'}}>
-              <h2 style={{fontSize:'2rem', fontWeight:900, color:'#0f172a'}}>{editingDriver ? 'Update Profile' : 'Register Driver'}</h2>
-              <p style={{color:'#64748b', fontWeight:600, marginTop:'0.3rem'}}>Complete the driver profile information below</p>
+            <div className="modal-header">
+              <div className="modal-header-left">
+                <div className="modal-header-eyebrow">
+                  <div className={`modal-icon ${editingDriver ? 'modal-icon-green' : 'modal-icon-blue'}`}>
+                    {editingDriver ? <Edit size={18}/> : <Plus size={18}/>}
+                  </div>
+                  <span style={{fontSize:'0.8rem', fontWeight:700, color:'#94a3b8', textTransform:'uppercase', letterSpacing:'0.06em'}}>{editingDriver ? 'Edit Driver' : 'New Driver'}</span>
+                </div>
+                <div className="modal-title">{editingDriver ? 'Update Driver Profile' : 'Register Driver'}</div>
+                <div className="modal-subtitle">Complete the driver profile information below</div>
+              </div>
+              <button type="button" className="close-btn" onClick={() => setShowForm(false)}><X size={18}/></button>
             </div>
-            
-            <form onSubmit={handleSubmit} className="form-grid">
+            <div className="modal-body">
+            <form onSubmit={handleSubmit} className="form-grid" id="driver-form">
               <div className="form-section-title"><User size={18}/> Basic Information</div>
               <div className="form-group">
                 <label>Driver ID</label>
@@ -530,10 +646,14 @@ function DriverManager() {
                 <textarea name="notes" defaultValue={editingDriver?.notes} placeholder="Any specific skills, medical info, or behavioral notes..."></textarea>
               </div>
 
-              <button type="submit" className="btn-save" disabled={loading}>
+            </form>
+            </div>{/* end modal-body */}
+            <div className="modal-footer">
+              <button type="submit" form="driver-form" className="btn-save" style={{flex:2}} disabled={loading}>
                 {loading ? 'Processing...' : (editingDriver ? 'Save Profile Changes' : 'Register New Driver')}
               </button>
-            </form>
+              <button type="button" className="btn-save secondary" style={{flex:1}} onClick={() => setShowForm(false)}>Cancel</button>
+            </div>
           </div>
         </div>
       )}

@@ -25,7 +25,8 @@ import {
   Activity,
   Search,
   Filter,
-  Download
+  Download,
+  Tag
 } from 'lucide-react'
 
 function TripManager() {
@@ -40,6 +41,7 @@ function TripManager() {
   const [searchTerm, setSearchTerm] = useState('')
   const [dateFilter, setDateFilter] = useState('')
   const [statusFilter, setStatusFilter] = useState('')
+  const [selectedTrips, setSelectedTrips] = useState([])
 
   useEffect(() => {
     const savedTrips = JSON.parse(localStorage.getItem('myTrips') || '[]')
@@ -212,6 +214,20 @@ function TripManager() {
     return matchesSearch && matchesDate && matchesStatus;
   })
 
+  const toggleSelectAll = () => {
+    if (selectedTrips.length === filteredTrips.length) {
+      setSelectedTrips([]);
+    } else {
+      setSelectedTrips(filteredTrips.map(t => t.id));
+    }
+  };
+
+  const toggleSelectTrip = (id) => {
+    setSelectedTrips(prev => 
+      prev.includes(id) ? prev.filter(item => item !== id) : [...prev, id]
+    );
+  };
+
   const openEdit = (t) => {
     setEditingTrip(t)
     setShowForm(true)
@@ -257,6 +273,7 @@ function TripManager() {
       id: editingTrip ? editingTrip.id : (formData.get('tripId') || 'T-' + Math.floor(Math.random() * 9000 + 1000)),
       date: formData.get('date'),
       driverName: formData.get('driverName'),
+      secondaryDriverName: formData.get('secondaryDriverName'),
       vehicleNumber: formData.get('vehicleNumber'),
       companyClientName: formData.get('companyClientName'),
       fromLocation: formData.get('fromLocation'),
@@ -334,6 +351,48 @@ function TripManager() {
     document.body.removeChild(link);
   }
 
+  const handleExportSingle = (t) => {
+    const headers = ['Field', 'Value'];
+    const data = [
+      ['Trip ID', t.id],
+      ['Date', t.date],
+      ['Driver 1', t.driverName],
+      ['Driver 2', t.secondaryDriverName || 'N/A'],
+      ['Vehicle', t.vehicleNumber],
+      ['Client', t.companyClientName],
+      ['From', t.fromLocation],
+      ['To', t.toLocation],
+      ['Total KM', t.totalKm],
+      ['Diesel', t.dieselExpense],
+      ['Maintenance', t.maintenanceExpense],
+      ['Tolls', t.tollExpense],
+      ['Parking', t.parkingExpense],
+      ['Food', t.foodExpense],
+      ['Driver Batta', t.driverBatta],
+      ['Other Exp', t.otherExpense],
+      ['Total Expense', t.totalExpense],
+      ['Goods Rent', t.goodsRent],
+      ['Total Advance', t.totalAdvance],
+      ['Profit Amount', t.profitAmount],
+      ['Payment Status', t.paymentStatus],
+      ['Payment Mode', t.paymentMode],
+      ['Balance', t.balanceAmount],
+      ['Status', t.tripStatus],
+      ['Notes', t.note]
+    ];
+
+    const csvContent = "data:text/csv;charset=utf-8," 
+      + [headers.join(','), ...data.map(r => r.join(','))].join('\n');
+    
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    link.setAttribute("download", `Trip_${t.id}_Details.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  }
+
   return (
     <main className="manager-page-content">
       <style>{`
@@ -345,52 +404,111 @@ function TripManager() {
         .btn-add { background: #3b82f6; color: #fff; padding: 0.9rem 1.8rem; border-radius: 14px; font-weight: 800; display: flex; align-items: center; gap: 0.6rem; border: none; cursor: pointer; transition: all 0.3s; box-shadow: 0 4px 12px rgba(59, 130, 246, 0.2); }
         .btn-add:hover { background: #2563eb; transform: translateY(-2px); box-shadow: 0 12px 24px rgba(59, 130, 246, 0.3); }
 
-        .table-card { background: #fff; border-radius: 28px; border: 1px solid #e2e8f0; overflow: hidden; box-shadow: 0 10px 30px rgba(0,0,0,0.04); }
+        /* ── Table ── */
+        .table-card { background: #fff; border-radius: 20px; border: 1px solid #e2e8f0; overflow: hidden; box-shadow: 0 4px 24px rgba(0,0,0,0.05); }
         .m-table { width: 100%; border-collapse: collapse; text-align: left; }
-        .m-table th { background: #f8fafc; padding: 1.2rem 0.6rem; font-size: 0.65rem; font-weight: 800; color: #64748b; text-transform: uppercase; letter-spacing: 0.05em; border-bottom: 2px solid #f1f5f9; }
-        .m-table td { padding: 1.2rem 0.6rem; border-bottom: 1px solid #f1f5f9; font-weight: 600; color: #1e293b; font-size: 0.8rem; }
-        
-        .action-btns { display: flex; gap: 0.6rem; }
-        .icon-btn { width: 36px; height: 36px; border-radius: 10px; border: 1px solid #e2e8f0; display: grid; place-items: center; cursor: pointer; transition: 0.2s; background: #fff; color: #64748b; }
+        .m-table thead tr { background: linear-gradient(135deg, #0f172a, #1e293b); }
+        .m-table th { padding: 1rem 0.75rem; font-size: 0.65rem; font-weight: 700; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.08em; white-space: nowrap; border: none; }
+        .m-table th:first-child { padding-left: 1.5rem; border-radius: 0; }
+        .m-table th:last-child { padding-right: 1.5rem; }
+        .m-table tbody tr { transition: background 0.15s; }
+        .m-table tbody tr:nth-child(odd) { background: #fff; }
+        .m-table tbody tr:nth-child(even) { background: #fafbfc; }
+        .m-table tbody tr:hover { background: #eff6ff; }
+        .m-table tbody tr.selected-row { background: #eff6ff; }
+        .m-table td { padding: 0.9rem 0.75rem; border-bottom: 1px solid #f1f5f9; font-weight: 600; color: #1e293b; font-size: 0.82rem; }
+        .m-table td:first-child { padding-left: 1.5rem; }
+        .m-table td:last-child { padding-right: 1.5rem; }
+        .m-table tbody tr:last-child td { border-bottom: none; }
+
+        /* Checkbox Style */
+        .m-checkbox {
+          width: 18px;
+          height: 18px;
+          cursor: pointer;
+          accent-color: #3b82f6;
+          border-radius: 4px;
+        }
+
+        .action-btns { display: flex; gap: 0.4rem; }
+        .icon-btn { width: 32px; height: 32px; border-radius: 8px; border: 1px solid #e2e8f0; display: grid; place-items: center; cursor: pointer; transition: all 0.15s; background: #fff; color: #94a3b8; }
         .icon-btn:hover { border-color: #3b82f6; color: #3b82f6; background: #eff6ff; }
         .icon-btn.delete:hover { border-color: #ef4444; color: #ef4444; background: #fef2f2; }
-        .icon-btn.view:hover { border-color: #3b82f6; color: #3b82f6; background: #eff6ff; }
+        .icon-btn.view:hover { border-color: #6366f1; color: #6366f1; background: #eef2ff; }
 
-        .trip-badge { padding: 0.4rem 0.8rem; border-radius: 8px; font-size: 0.7rem; font-weight: 900; text-transform: uppercase; letter-spacing: 0.02em; }
-        .tb-completed { background: #dcfce7; color: #166534; }
-        .tb-active { background: #e0f2fe; color: #0369a1; }
-        .tb-cancelled { background: #fee2e2; color: #991b1b; }
+        .trip-badge { padding: 0.3rem 0.7rem; border-radius: 6px; font-size: 0.68rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.04em; white-space: nowrap; }
+        .tb-completed { background: #dcfce7; color: #15803d; }
+        .tb-active { background: #dbeafe; color: #1d4ed8; }
+        .tb-cancelled { background: #fee2e2; color: #b91c1c; }
 
-        .form-overlay, .detail-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(15, 23, 42, 0.4); backdrop-filter: blur(12px); display: grid; place-items: center; z-index: 1000; padding: 2rem; }
-        .form-card, .detail-card { background: #fff; border-radius: 36px; width: 100%; max-width: 1100px; padding: 4rem; position: relative; max-height: 92vh; overflow-y: auto; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25); }
-        .close-btn { position: absolute; top: 2.5rem; right: 2.5rem; background: #f1f5f9; border: none; width: 44px; height: 44px; border-radius: 50%; font-weight: 900; cursor: pointer; display: grid; place-items: center; transition: 0.2s; }
-        .close-btn:hover { transform: rotate(90deg); }
+        /* ── Modal System ── */
+        .form-overlay, .detail-overlay { position: fixed; inset: 0; background: rgba(2, 8, 23, 0.7); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); display: flex; align-items: center; justify-content: center; z-index: 1000; padding: 1.5rem; }
+        .form-card, .detail-card { background: #fff; border-radius: 28px; width: 100%; max-width: 1120px; position: relative; max-height: 93vh; overflow: hidden; display: flex; flex-direction: column; box-shadow: 0 40px 80px -20px rgba(0,0,0,0.5); border: 1px solid rgba(255,255,255,0.08); }
 
-        .form-grid, .detail-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1.25rem; }
-        .form-section-title, .detail-section-title { grid-column: span 4; font-size: 1.1rem; font-weight: 800; color: #0f172a; margin: 1.5rem 0 0.5rem; padding-bottom: 0.5rem; border-bottom: 2px solid #f1f5f9; display: flex; align-items: center; gap: 0.6rem; }
-        
-        .form-group { display: flex; flex-direction: column; gap: 0.5rem; }
-        .form-group label { font-size: 0.8rem; font-weight: 800; color: #64748b; }
-        .form-group input, .form-group select, .form-group textarea { padding: 1rem 1.2rem; border-radius: 12px; border: 2px solid #f1f5f9; font-weight: 700; outline: none; transition: 0.2s; font-family: inherit; }
-        .form-group input:focus { border-color: #3b82f6; box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.1); }
+        /* ── Modal Header ── */
+        .modal-header { padding: 2rem 2.5rem 1.5rem; border-bottom: 1px solid #f1f5f9; flex-shrink: 0; display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; }
+        .modal-header-left { display: flex; flex-direction: column; gap: 0.3rem; }
+        .modal-header-eyebrow { display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.5rem; }
+        .modal-header-eyebrow .modal-icon { width: 40px; height: 40px; border-radius: 12px; display: grid; place-items: center; }
+        .modal-icon-blue { background: linear-gradient(135deg, #3b82f6, #2563eb); color: #fff; }
+        .modal-icon-green { background: linear-gradient(135deg, #22c55e, #16a34a); color: #fff; }
+        .modal-title { font-size: 1.7rem; font-weight: 900; color: #0f172a; letter-spacing: -0.03em; }
+        .modal-subtitle { font-size: 0.9rem; color: #64748b; font-weight: 500; }
+        .close-btn { flex-shrink: 0; background: #f8fafc; border: 1px solid #e2e8f0; width: 38px; height: 38px; border-radius: 10px; display: grid; place-items: center; cursor: pointer; transition: all 0.2s; color: #64748b; }
+        .close-btn:hover { background: #fee2e2; color: #ef4444; border-color: #fecaca; transform: rotate(90deg); }
+
+        /* ── Modal Body ── */
+        .modal-body { overflow-y: auto; padding: 2rem 2.5rem; flex: 1; }
+        .modal-body::-webkit-scrollbar { width: 5px; } 
+        .modal-body::-webkit-scrollbar-track { background: #f8fafc; } 
+        .modal-body::-webkit-scrollbar-thumb { background: #e2e8f0; border-radius: 99px; }
+
+        /* ── Form Grid ── */
+        .form-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1.25rem; }
+        .form-section-title { grid-column: span 4; font-size: 0.75rem; font-weight: 800; color: #3b82f6; text-transform: uppercase; letter-spacing: 0.08em; margin: 1.5rem 0 0.25rem; padding: 0 0 0.6rem; border-bottom: 1px solid #e2e8f0; display: flex; align-items: center; gap: 0.6rem; }
+        .form-section-title svg { color: #3b82f6; }
+        .form-group { display: flex; flex-direction: column; gap: 0.45rem; }
+        .form-group label { font-size: 0.78rem; font-weight: 700; color: #64748b; display: flex; align-items: center; gap: 0.35rem; }
+        .form-group input, .form-group select, .form-group textarea { padding: 0.8rem 1rem; border-radius: 10px; border: 1.5px solid #e2e8f0; font-weight: 600; outline: none; transition: all 0.18s; font-family: inherit; color: #0f172a; background: #fff; font-size: 0.9rem; }
+        .form-group input::placeholder { color: #cbd5e1; font-weight: 500; }
+        .form-group input:hover, .form-group select:hover { border-color: #cbd5e1; background: #fafafa; }
+        .form-group input:focus, .form-group select:focus { border-color: #3b82f6; box-shadow: 0 0 0 3px rgba(59,130,246,0.12); background: #fff; }
         .form-group.span-2 { grid-column: span 2; }
-        
-        .detail-item { background: #f8fafc; padding: 1.2rem; border-radius: 16px; border: 1px solid #f1f5f9; }
-        .detail-label { font-size: 0.7rem; font-weight: 800; color: #94a3b8; text-transform: uppercase; margin-bottom: 0.4rem; display: block; }
-        .detail-value { font-size: 1.05rem; font-weight: 800; color: #1e293b; }
+        .form-group.span-4 { grid-column: span 4; }
+
+        /* ── Detail Grid ── */
+        .detail-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.75rem; }
+        .detail-section-title { grid-column: span 4; font-size: 0.75rem; font-weight: 800; color: #3b82f6; text-transform: uppercase; letter-spacing: 0.08em; margin: 1.5rem 0 0.25rem; padding: 0 0 0.6rem; border-bottom: 1px solid #e2e8f0; display: flex; align-items: center; gap: 0.6rem; }
+        .detail-item { background: #f8fafc; padding: 1rem 1.1rem; border-radius: 12px; border: 1px solid #f1f5f9; transition: all 0.15s; }
+        .detail-item:hover { border-color: #dbeafe; background: #eff6ff; }
+        .detail-label { font-size: 0.68rem; font-weight: 700; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 0.35rem; display: flex; align-items: center; gap: 0.3rem; }
+        .detail-value { font-size: 1rem; font-weight: 800; color: #0f172a; }
         .detail-value.highlight { color: #3b82f6; }
         .detail-item.span-2 { grid-column: span 2; }
+        .detail-item.span-4 { grid-column: span 4; }
+        .detail-item.accent-green { background: #f0fdf4; border-color: #bbf7d0; }
+        .detail-item.accent-red { background: #fef2f2; border-color: #fecaca; }
+        .detail-item.accent-amber { background: #fffbeb; border-color: #fed7aa; }
 
-        .btn-save { grid-column: span 4; background: #0f172a; color: #fff; padding: 1.4rem; border-radius: 18px; font-weight: 900; margin-top: 2rem; cursor: pointer; border: none; font-size: 1.1rem; letter-spacing: 0.02em; transition: 0.3s; }
-        .btn-save:hover { background: #1e293b; transform: translateY(-2px); }
+        /* ── Modal Footer ── */
+        .modal-footer { padding: 1.25rem 2.5rem 1.75rem; border-top: 1px solid #f1f5f9; display: flex; gap: 0.75rem; flex-shrink: 0; }
+        .btn-save { background: #0f172a; color: #fff; padding: 0.85rem 1.8rem; border-radius: 12px; font-weight: 700; cursor: pointer; border: none; font-size: 0.9rem; transition: all 0.2s; display: flex; align-items: center; gap: 0.5rem; flex: 1; justify-content: center; }
+        .btn-save:hover { background: #1e293b; transform: translateY(-1px); box-shadow: 0 8px 20px rgba(15,23,42,0.2); }
+        .btn-save:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
+        .btn-save.green { background: linear-gradient(135deg, #22c55e, #16a34a); }
+        .btn-save.green:hover { background: linear-gradient(135deg, #16a34a, #15803d); box-shadow: 0 8px 20px rgba(34,197,94,0.25); }
+        .btn-save.secondary { background: #f1f5f9; color: #475569; box-shadow: none; }
+        .btn-save.secondary:hover { background: #e2e8f0; color: #0f172a; transform: none; box-shadow: none; }
 
-        .stat-preview { background: #f8fafc; padding: 1.5rem; border-radius: 20px; border: 1px solid #e2e8f0; grid-column: span 4; display: grid; grid-template-columns: repeat(4, 1fr); gap: 2rem; margin-top: 1rem; }
-        .stat-item { display: flex; flex-direction: column; gap: 0.2rem; }
-        .stat-label { font-size: 0.75rem; font-weight: 800; color: #64748b; text-transform: uppercase; }
-        .stat-value { font-size: 1.25rem; font-weight: 900; color: #0f172a; }
+        .stat-preview { background: linear-gradient(135deg, #0f172a, #1e293b); padding: 1.5rem 2rem; border-radius: 16px; grid-column: span 4; display: grid; grid-template-columns: repeat(4, 1fr); gap: 1.5rem; margin-top: 0.5rem; }
+        .stat-item { display: flex; flex-direction: column; gap: 0.15rem; }
+        .stat-label { font-size: 0.7rem; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 0.06em; }
+        .stat-value { font-size: 1.3rem; font-weight: 900; color: #fff; }
+        .stat-value.profit { color: #4ade80; }
+        .stat-value.expense { color: #f87171; }
 
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
-        .animate-fade-in { animation: fadeIn 0.4s cubic-bezier(0, 0, 0.2, 1); }
+        @keyframes fadeIn { from { opacity: 0; transform: scale(0.96) translateY(12px); } to { opacity: 1; transform: scale(1) translateY(0); } }
+        .animate-fade-in { animation: fadeIn 0.3s cubic-bezier(0.16, 1, 0.3, 1); }
 
         .filter-bar { background: #fff; padding: 1.5rem; border-radius: 20px; border: 1px solid #e2e8f0; margin-bottom: 2rem; display: flex; gap: 1.5rem; align-items: flex-end; flex-wrap: wrap; box-shadow: 0 4px 12px rgba(0,0,0,0.02); }
         .filter-group { display: flex; flex-direction: column; gap: 0.5rem; flex: 1; min-width: 200px; }
@@ -412,9 +530,14 @@ function TripManager() {
             <h1>Trip Operations Log</h1>
             <p style={{color:'#64748b', fontWeight:600, marginTop:'0.4rem'}}>Comprehensive tracking for every journey</p>
           </div>
-          <button className="btn-add" onClick={() => { setEditingTrip(null); setShowForm(true); }}>
-            <Plus size={22} /> Log New Trip
-          </button>
+          <div style={{display: 'flex', flexDirection: 'column', gap: '0.8rem', alignItems: 'flex-end'}}>
+            <button className="btn-add" onClick={() => { setEditingTrip(null); setShowForm(true); }}>
+              <Plus size={22} /> Log New Trip
+            </button>
+            <button className="btn-download" onClick={handleExport} style={{height: '40px', padding: '0.6rem 1.2rem', fontSize: '0.85rem'}}>
+              <Download size={16} /> Export CSV Report
+            </button>
+          </div>
         </header>
 
         <div className="filter-bar">
@@ -454,59 +577,87 @@ function TripManager() {
             </div>
           </div>
           <button className="btn-clear" onClick={() => { setSearchTerm(''); setDateFilter(''); setStatusFilter(''); }}>Clear</button>
-          <button className="btn-download" onClick={handleExport}><Download size={18} /> Export CSV</button>
         </div>
 
         <div className="table-card">
           <table className="m-table">
             <thead>
               <tr>
+                <th style={{ width: '40px' }}>
+                  <input 
+                    type="checkbox" 
+                    className="m-checkbox" 
+                    checked={filteredTrips.length > 0 && selectedTrips.length === filteredTrips.length}
+                    onChange={toggleSelectAll}
+                  />
+                </th>
                 <th>Date</th>
+                <th>Driver(s)</th>
                 <th>Client / Company</th>
-                <th>Route (From → To)</th>
-                <th>Advances (S / C)</th>
-                <th>Total KM</th>
+                <th>Route</th>
+                <th>Advances</th>
+                <th>KM</th>
                 <th>Diesel</th>
                 <th>Maint.</th>
-                <th>Other Exp</th>
-                <th>Driver Batta</th>
-                <th>Goods Rent</th>
+                <th>Other</th>
+                <th>Batta</th>
+                <th>Rent</th>
                 <th>Profit</th>
-                <th>Note</th>
+                <th>Status</th>
                 <th>Actions</th>
               </tr>
             </thead>
             <tbody>
               {filteredTrips.map(trip => (
-                <tr key={trip.id}>
-                  <td style={{whiteSpace:'nowrap'}}>{trip.date}</td>
-                  <td style={{fontWeight:800}}>{trip.companyClientName}</td>
-                  <td style={{whiteSpace:'nowrap'}}>
-                    <div style={{display:'flex', alignItems:'center', gap:'0.4rem'}}>
-                      {trip.fromLocation} <ArrowRight size={12} color="#3b82f6" /> {trip.toLocation}
-                    </div>
-                  </td>
-                  <td style={{whiteSpace:'nowrap'}}>
-                    <div style={{fontSize:'0.85rem'}}>S: ₹{trip.advanceFromSuresh}</div>
-                    <div style={{fontSize:'0.85rem'}}>C: ₹{trip.advanceFromCompany}</div>
-                  </td>
-                  <td><span style={{fontWeight:800}}>{trip.totalKm}</span></td>
-                  <td>₹{trip.dieselExpense}</td>
-                  <td>₹{trip.maintenanceExpense}</td>
-                  <td>₹{trip.otherExpense}</td>
-                  <td>₹{trip.driverBatta}</td>
-                  <td style={{color:'#3b82f6', fontWeight:900}}>₹{trip.goodsRent}</td>
-                  <td style={{color:'#22c55e', fontWeight:900}}>₹{trip.profitAmount}</td>
+                <tr key={trip.id} className={selectedTrips.includes(trip.id) ? 'selected-row' : ''}>
                   <td>
-                    <div style={{fontSize:'0.75rem', color:'#64748b', maxWidth:'150px', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap'}} title={trip.note}>
-                      {trip.note || '-'}
+                    <input 
+                      type="checkbox" 
+                      className="m-checkbox" 
+                      checked={selectedTrips.includes(trip.id)}
+                      onChange={() => toggleSelectTrip(trip.id)}
+                    />
+                  </td>
+                  <td style={{whiteSpace:'nowrap', color:'#64748b', fontSize:'0.78rem'}}>{trip.date}</td>
+                  <td>
+                    <div style={{display:'flex', flexDirection:'column', gap:'0.15rem'}}>
+                      <span style={{fontWeight:800, color:'#0f172a'}}>{trip.driverName}</span>
+                      {trip.secondaryDriverName && (
+                        <span style={{fontSize:'0.72rem', color:'#94a3b8', fontWeight:600}}>
+                          + {trip.secondaryDriverName}
+                        </span>
+                      )}
                     </div>
+                  </td>
+                  <td style={{fontWeight:700}}>{trip.companyClientName}</td>
+                  <td style={{whiteSpace:'nowrap', color:'#64748b'}}>
+                    <div style={{display:'flex', alignItems:'center', gap:'0.3rem', fontSize:'0.8rem'}}>
+                      <span style={{fontWeight:700, color:'#0f172a'}}>{trip.fromLocation}</span>
+                      <ArrowRight size={11} color="#3b82f6" />
+                      <span style={{fontWeight:700, color:'#0f172a'}}>{trip.toLocation}</span>
+                    </div>
+                  </td>
+                  <td style={{whiteSpace:'nowrap'}}>
+                    <div style={{fontSize:'0.78rem', color:'#475569'}}>S: ₹{trip.advanceFromSuresh}</div>
+                    <div style={{fontSize:'0.78rem', color:'#475569'}}>C: ₹{trip.advanceFromCompany}</div>
+                  </td>
+                  <td><span style={{fontWeight:800, color:'#0f172a'}}>{trip.totalKm}</span><span style={{fontSize:'0.72rem', color:'#94a3b8', marginLeft:'2px'}}>km</span></td>
+                  <td style={{color:'#475569'}}>₹{trip.dieselExpense}</td>
+                  <td style={{color:'#475569'}}>₹{trip.maintenanceExpense}</td>
+                  <td style={{color:'#475569'}}>₹{trip.otherExpense}</td>
+                  <td style={{color:'#475569'}}>₹{trip.driverBatta}</td>
+                  <td style={{fontWeight:800, color:'#3b82f6'}}>₹{trip.goodsRent}</td>
+                  <td style={{fontWeight:900, color: parseFloat(trip.profitAmount) >= 0 ? '#16a34a' : '#dc2626', fontSize:'0.9rem'}}>₹{trip.profitAmount}</td>
+                  <td>
+                    <span className={`trip-badge ${trip.tripStatus === 'Completed' ? 'tb-completed' : trip.tripStatus === 'Cancelled' ? 'tb-cancelled' : 'tb-active'}`}>
+                      {trip.tripStatus}
+                    </span>
                   </td>
                   <td>
                     <div className="action-btns">
-                      <button className="icon-btn view" onClick={() => setViewingTrip(trip)} title="View Full Details"><Eye size={16} /></button>
-                      <button className="icon-btn" onClick={() => openEdit(trip)} title="Edit"><Edit size={16} /></button>
-                      <button className="icon-btn delete" onClick={() => handleDelete(trip.id)} title="Delete"><Trash2 size={16} /></button>
+                      <button className="icon-btn view" onClick={() => setViewingTrip(trip)} title="View Details"><Eye size={15} /></button>
+                      <button className="icon-btn" onClick={() => openEdit(trip)} title="Edit"><Edit size={15} /></button>
+                      <button className="icon-btn delete" onClick={() => handleDelete(trip.id)} title="Delete"><Trash2 size={15} /></button>
                     </div>
                   </td>
                 </tr>
@@ -527,16 +678,22 @@ function TripManager() {
       {viewingTrip && (
         <div className="detail-overlay" onClick={() => setViewingTrip(null)}>
           <div className="detail-card animate-fade-in" onClick={e => e.stopPropagation()}>
-            <button className="close-btn" onClick={() => setViewingTrip(null)}><X size={24} /></button>
-            <div style={{marginBottom:'3rem'}}>
-              <div style={{display:'flex', alignItems:'center', gap:'1rem', marginBottom:'0.5rem'}}>
-                <span className={`trip-badge ${viewingTrip.tripStatus === 'Completed' ? 'tb-completed' : 'tb-active'}`}>{viewingTrip.tripStatus}</span>
-                <span style={{fontSize:'0.9rem', color:'#94a3b8', fontWeight:800}}>TRIP ID: {viewingTrip.id}</span>
+            {/* Modal Header */}
+            <div className="modal-header">
+              <div className="modal-header-left">
+                <div className="modal-header-eyebrow">
+                  <div className="modal-icon modal-icon-blue"><Navigation size={18} /></div>
+                  <span className={`trip-badge ${viewingTrip.tripStatus === 'Completed' ? 'tb-completed' : viewingTrip.tripStatus === 'Cancelled' ? 'tb-cancelled' : 'tb-active'}`}>{viewingTrip.tripStatus}</span>
+                  <span style={{fontSize:'0.8rem', color:'#94a3b8', fontWeight:700, letterSpacing:'0.05em'}}>ID: {viewingTrip.id}</span>
+                </div>
+                <div className="modal-title">Trip Details</div>
+                <div className="modal-subtitle">Complete breakdown of journey, expenses and profit</div>
               </div>
-              <h2 style={{fontSize:'2.4rem', fontWeight:900, color:'#0f172a'}}>Full Trip Details</h2>
-              <p style={{color:'#64748b', fontWeight:600}}>Complete breakdown of journey, expenses and profit</p>
+              <button className="close-btn" onClick={() => setViewingTrip(null)}><X size={18} /></button>
             </div>
 
+            {/* Modal Body */}
+            <div className="modal-body">
             <div className="detail-grid">
               <div className="detail-section-title"><Navigation size={18}/> Journey & Driver</div>
               <div className="detail-item">
@@ -544,8 +701,12 @@ function TripManager() {
                 <div className="detail-value">{viewingTrip.date}</div>
               </div>
               <div className="detail-item">
-                <span className="detail-label">Driver Name</span>
+                <span className="detail-label"><User size={12}/> Primary Driver</span>
                 <div className="detail-value">{viewingTrip.driverName}</div>
+              </div>
+              <div className="detail-item">
+                <span className="detail-label"><User size={12}/> Secondary Driver</span>
+                <div className="detail-value">{viewingTrip.secondaryDriverName || 'None'}</div>
               </div>
               <div className="detail-item">
                 <span className="detail-label">Vehicle Number</span>
@@ -638,10 +799,12 @@ function TripManager() {
                 <div className="detail-value">{viewingTrip.note || 'No additional notes provided.'}</div>
               </div>
             </div>
-            
-            <div style={{marginTop:'3rem', display:'flex', gap:'1rem'}}>
-              <button className="btn-save" onClick={() => { setViewingTrip(null); openEdit(viewingTrip); }}>Edit This Record</button>
-              <button className="btn-save" style={{background:'#f1f5f9', color:'#64748b'}} onClick={() => setViewingTrip(null)}>Close</button>
+            </div>{/* end modal-body */}
+
+            <div className="modal-footer">
+              <button className="btn-save" style={{flex:2}} onClick={() => { setViewingTrip(null); openEdit(viewingTrip); }}><Edit size={16}/> Edit Record</button>
+              <button className="btn-save green" style={{flex:1}} onClick={() => handleExportSingle(viewingTrip)}><Download size={16}/> Export</button>
+              <button className="btn-save secondary" style={{flex:1}} onClick={() => setViewingTrip(null)}>Close</button>
             </div>
           </div>
         </div>
@@ -650,28 +813,42 @@ function TripManager() {
       {showForm && (
         <div className="form-overlay">
           <div className="form-card animate-fade-in">
-            <button className="close-btn" onClick={() => setShowForm(false)}><X size={24} /></button>
-            <div style={{marginBottom:'2.5rem'}}>
-              <h2 style={{fontSize:'2rem', fontWeight:900, color:'#0f172a'}}>{editingTrip ? 'Update Trip Log' : 'Log New Trip'}</h2>
-              <p style={{color:'#64748b', fontWeight:600, marginTop:'0.3rem'}}>Enter comprehensive trip, expense, and payment details</p>
+            {/* Modal Header */}
+            <div className="modal-header">
+              <div className="modal-header-left">
+                <div className="modal-header-eyebrow">
+                  <div className={`modal-icon ${editingTrip ? 'modal-icon-green' : 'modal-icon-blue'}`}>
+                    {editingTrip ? <Edit size={18}/> : <Plus size={18}/>}
+                  </div>
+                  <span style={{fontSize:'0.8rem', fontWeight:700, color:'#94a3b8', textTransform:'uppercase', letterSpacing:'0.06em'}}>{editingTrip ? 'Edit Record' : 'New Trip'}</span>
+                </div>
+                <div className="modal-title">{editingTrip ? 'Update Trip Log' : 'Log New Trip'}</div>
+                <div className="modal-subtitle">Fill in all journey, expense and payment details</div>
+              </div>
+              <button type="button" className="close-btn" onClick={() => setShowForm(false)}><X size={18}/></button>
             </div>
-            
-            <form onSubmit={handleSubmit} className="form-grid">
+
+            <div className="modal-body">
+            <form onSubmit={handleSubmit} className="form-grid" id="trip-form">
               <div className="form-section-title"><Navigation size={18}/> Journey Details</div>
               <div className="form-group">
-                <label>Trip ID</label>
+                <label><Tag size={14}/> Trip ID</label>
                 <input type="text" name="tripId" defaultValue={editingTrip?.id} placeholder="T-XXXX" />
               </div>
               <div className="form-group">
-                <label>Date</label>
+                <label><Calendar size={14}/> Date</label>
                 <input type="date" name="date" defaultValue={editingTrip?.date || new Date().toISOString().split('T')[0]} required />
               </div>
               <div className="form-group">
-                <label>Driver Name</label>
+                <label><User size={14}/> Driver 1 (Primary)</label>
                 <input type="text" name="driverName" defaultValue={editingTrip?.driverName} required />
               </div>
               <div className="form-group">
-                <label>Vehicle Number</label>
+                <label><User size={14}/> Driver 2 (Optional)</label>
+                <input type="text" name="secondaryDriverName" defaultValue={editingTrip?.secondaryDriverName} placeholder="Second driver name" />
+              </div>
+              <div className="form-group">
+                <label><Car size={14}/> Vehicle Number</label>
                 <input type="text" name="vehicleNumber" defaultValue={editingTrip?.vehicleNumber} required />
               </div>
               <div className="form-group span-2">
@@ -771,14 +948,19 @@ function TripManager() {
                 <label>Note</label>
                 <input type="text" name="note" defaultValue={editingTrip?.note} placeholder="Optional trip notes" />
               </div>
+            </form>
+            </div>{/* end modal-body */}
 
-              <button type="submit" className="btn-save" disabled={loading}>
+            <div className="modal-footer">
+              <button type="submit" form="trip-form" className="btn-save" style={{flex:2}} disabled={loading}>
                 {loading ? 'Calculating & Saving...' : (editingTrip ? 'Update Trip Record' : 'Log Trip & Calculate Profit')}
               </button>
-            </form>
+              <button type="button" className="btn-save secondary" style={{flex:1}} onClick={() => setShowForm(false)}>Cancel</button>
+            </div>
           </div>
         </div>
       )}
+
     </main>
   )
 }
