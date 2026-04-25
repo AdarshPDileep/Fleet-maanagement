@@ -598,13 +598,12 @@ function TripManager() {
                 </th>
                 <th>Date</th>
                 <th>Driver(s)</th>
+                <th>Vehicle</th>
                 <th>Client / Company</th>
                 <th>Route</th>
                 <th>Advances</th>
                 <th>KM</th>
                 <th>Diesel</th>
-                <th>Maint.</th>
-                <th>Other</th>
                 <th>Batta</th>
                 <th>Rent</th>
                 <th>Profit</th>
@@ -634,6 +633,11 @@ function TripManager() {
                       )}
                     </div>
                   </td>
+                  <td>
+                    <span style={{background:'#f1f5f9', padding:'0.3rem 0.5rem', borderRadius:'4px', border:'1px solid #e2e8f0', fontFamily:'monospace', fontWeight:700, fontSize:'0.75rem', color:'#0f172a'}}>
+                      {trip.vehicleNumber}
+                    </span>
+                  </td>
                   <td style={{fontWeight:700}}>{trip.companyClientName}</td>
                   <td style={{whiteSpace:'nowrap', color:'#64748b'}}>
                     <div style={{display:'flex', alignItems:'center', gap:'0.3rem', fontSize:'0.8rem'}}>
@@ -648,8 +652,6 @@ function TripManager() {
                   </td>
                   <td><span style={{fontWeight:800, color:'#0f172a'}}>{trip.totalKm}</span><span style={{fontSize:'0.72rem', color:'#94a3b8', marginLeft:'2px'}}>km</span></td>
                   <td style={{color:'#475569'}}>₹{trip.dieselExpense}</td>
-                  <td style={{color:'#475569'}}>₹{trip.maintenanceExpense}</td>
-                  <td style={{color:'#475569'}}>₹{trip.otherExpense}</td>
                   <td style={{color:'#475569'}}>₹{trip.driverBatta}</td>
                   <td style={{fontWeight:800, color:'#3b82f6'}}>₹{trip.goodsRent}</td>
                   <td style={{fontWeight:900, color: parseFloat(trip.profitAmount) >= 0 ? '#16a34a' : '#dc2626', fontSize:'0.9rem'}}>₹{trip.profitAmount}</td>
