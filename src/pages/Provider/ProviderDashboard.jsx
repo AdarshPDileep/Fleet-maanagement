@@ -8,6 +8,7 @@ import {
   Search,
   Truck,
   User,
+  X,
 } from 'lucide-react'
 
 const defaultTrips = [
@@ -313,23 +314,39 @@ function ProviderDashboard() {
         .top-bar { display: flex; justify-content: space-between; align-items: flex-start; gap: 1.5rem; margin-bottom: 1.5rem; }
         .top-copy h1 { margin: 0; font-size: 2.15rem; font-weight: 900; color: #0f172a; }
         .top-copy p { margin: 0.55rem 0 0; color: #64748b; font-weight: 600; max-width: 760px; }
-        .filter-toggle { display: inline-flex; align-items: center; gap: 0.65rem; padding: 0.9rem 1.1rem; border: 1px solid #dbe3ef; border-radius: 16px; background: #fff; font-weight: 800; cursor: pointer; color: #0f172a; }
-        .filter-panel { background: linear-gradient(135deg, #ffffff 0%, #f8fbff 100%); border: 1px solid #dbe3ef; border-radius: 24px; padding: 1.4rem; margin-bottom: 1.75rem; box-shadow: 0 18px 45px rgba(15, 23, 42, 0.05); }
-        .filter-head { display: flex; justify-content: space-between; align-items: center; gap: 1rem; margin-bottom: 1.15rem; }
-        .filter-title { display: flex; align-items: center; gap: 0.7rem; font-weight: 900; color: #0f172a; }
-        .filter-sub { color: #64748b; font-size: 0.92rem; font-weight: 600; margin-top: 0.25rem; }
-        .filter-actions { display: flex; gap: 0.75rem; flex-wrap: wrap; }
-        .ghost-btn, .clear-btn { border: 1px solid #dbe3ef; background: #fff; color: #0f172a; font-weight: 800; border-radius: 12px; padding: 0.82rem 1rem; cursor: pointer; }
-        .clear-btn { color: #dc2626; }
+        .filter-toggle { display: inline-flex; align-items: center; gap: 0.65rem; padding: 0.75rem 1.1rem; border: 1.5px solid #e2e8f0; border-radius: 12px; background: #fff; font-weight: 800; cursor: pointer; color: #334155; font-size: 0.85rem; transition: all 0.18s; }
+        .filter-toggle:hover { border-color: #3b82f6; color: #3b82f6; }
+        /* ── Filter Panel ── */
+        .filter-panel { background: #fff; border-radius: 20px; border: 1px solid #e2e8f0; margin-bottom: 1.75rem; overflow: hidden; box-shadow: 0 4px 24px rgba(0,0,0,0.04); }
+        .filter-panel-header { display: flex; align-items: center; justify-content: space-between; padding: 1.1rem 1.5rem; border-bottom: 1px solid #f1f5f9; background: linear-gradient(135deg, #fafbfc 0%, #f8fafc 100%); }
+        .filter-panel-title { display: flex; align-items: center; gap: 0.65rem; font-size: 0.82rem; font-weight: 800; color: #334155; text-transform: uppercase; letter-spacing: 0.06em; }
+        .filter-panel-title svg { color: #3b82f6; }
+        .filter-active-badge { background: #3b82f6; color: #fff; font-size: 0.65rem; font-weight: 900; padding: 0.2rem 0.55rem; border-radius: 99px; }
+        .filter-panel-actions { display: flex; align-items: center; gap: 0.6rem; }
+        .filter-results-count { font-size: 0.8rem; font-weight: 700; color: #64748b; padding: 0.35rem 0.9rem; background: #f1f5f9; border-radius: 8px; }
+        .filter-results-count span { color: #0f172a; font-weight: 900; }
+        .btn-clear-all { display: flex; align-items: center; gap: 0.4rem; background: transparent; color: #94a3b8; border: 1.5px solid #e2e8f0; padding: 0.38rem 0.9rem; border-radius: 8px; font-size: 0.78rem; font-weight: 700; cursor: pointer; transition: all 0.18s; font-family: inherit; }
+        .btn-clear-all:hover { background: #fef2f2; color: #ef4444; border-color: #fecaca; }
+        .ghost-btn { display: inline-flex; align-items: center; gap: 0.4rem; background: #f8fafc; color: #334155; border: 1.5px solid #e2e8f0; padding: 0.38rem 0.9rem; border-radius: 8px; font-size: 0.78rem; font-weight: 700; cursor: pointer; transition: all 0.18s; font-family: inherit; }
+        .ghost-btn:hover { background: #eff6ff; color: #2563eb; border-color: #bfdbfe; }
+        .filter-panel-body { padding: 1.4rem 1.5rem 1.25rem; }
         .filter-grid { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 1rem; }
-        .filter-group { display: flex; flex-direction: column; gap: 0.45rem; }
-        .filter-group label { font-size: 0.74rem; font-weight: 900; letter-spacing: 0.06em; text-transform: uppercase; color: #64748b; }
+        .filter-field { display: flex; flex-direction: column; gap: 0.4rem; }
+        .filter-field label { font-size: 0.7rem; font-weight: 800; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.07em; display: flex; align-items: center; gap: 0.35rem; }
+        .filter-field label svg { color: #3b82f6; opacity: 0.8; }
         .filter-input-wrap { position: relative; }
-        .filter-input-wrap svg { position: absolute; left: 0.95rem; top: 50%; transform: translateY(-50%); color: #94a3b8; }
-        .filter-input-wrap input { width: 100%; border-radius: 14px; border: 1px solid #dbe3ef; background: #fff; padding: 0.95rem 1rem 0.95rem 2.9rem; font-weight: 700; color: #0f172a; outline: none; }
-        .filter-input-wrap input:focus { border-color: #2563eb; box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.08); }
+        .filter-input-wrap .f-icon { position: absolute; left: 0.85rem; top: 50%; transform: translateY(-50%); color: #c4cdd8; pointer-events: none; display: flex; }
+        .filter-input-wrap input { width: 100%; padding: 0.65rem 0.9rem 0.65rem 2.5rem; border-radius: 10px; border: 1.5px solid #e9eef5; background: #f8fafc; font-weight: 600; color: #1e293b; outline: none; transition: all 0.18s; font-family: inherit; font-size: 0.85rem; box-sizing: border-box; }
+        .filter-input-wrap input::placeholder { color: #b8c4d0; font-weight: 500; }
+        .filter-input-wrap input:hover { border-color: #c7d4e4; background: #f4f7fb; }
+        .filter-input-wrap input:focus { border-color: #3b82f6; background: #fff; box-shadow: 0 0 0 3px rgba(59,130,246,0.1); }
+        .filter-input-wrap input[type=date]::-webkit-calendar-picker-indicator { opacity: 0.5; cursor: pointer; }
+        .filter-chips-row { display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; padding: 0.75rem 1.5rem 1rem; border-top: 1px dashed #f0f3f8; }
+        .filter-chip { display: inline-flex; align-items: center; gap: 0.4rem; background: #eff6ff; border: 1px solid #bfdbfe; color: #1d4ed8; padding: 0.3rem 0.55rem 0.3rem 0.75rem; border-radius: 6px; font-size: 0.75rem; font-weight: 700; }
+        .filter-chip-remove { display: flex; align-items: center; background: none; border: none; cursor: pointer; color: #93c5fd; padding: 0; line-height: 1; transition: color 0.15s; }
+        .filter-chip-remove:hover { color: #1d4ed8; }
+        .filter-chips-label { font-size: 0.72rem; font-weight: 700; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.06em; }
         .filter-summary { display: flex; flex-wrap: wrap; gap: 0.6rem; margin: 1rem 0 1.6rem; }
-        .filter-chip { display: inline-flex; align-items: center; gap: 0.45rem; background: #e0f2fe; color: #0f172a; padding: 0.55rem 0.85rem; border-radius: 999px; font-size: 0.82rem; font-weight: 800; }
         .stat-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 1rem; margin-bottom: 1.75rem; }
         .stat-card { background: #fff; border: 1px solid #e2e8f0; border-radius: 24px; padding: 1.35rem; display: flex; align-items: center; gap: 1rem; }
         .stat-icon { width: 52px; height: 52px; border-radius: 16px; display: grid; place-items: center; }
@@ -387,122 +404,99 @@ function ProviderDashboard() {
           </p>
         </div>
         <button className="filter-toggle" onClick={() => setShowFilters((current) => !current)}>
-          <Filter size={18} />
+          <Filter size={16} />
           {showFilters ? 'Hide Filters' : 'Show Filters'}
+          {hasActiveFilters && <span className="filter-active-badge" style={{background:'#3b82f6'}}>{Object.values(filters).filter(Boolean).length}</span>}
         </button>
       </header>
 
       {showFilters && (
         <section className="filter-panel">
-          <div className="filter-head">
-            <div>
-              <div className="filter-title">
-                <CalendarRange size={20} />
-                <span>Comprehensive Filters</span>
-              </div>
-              <div className="filter-sub">
-                Date range first, then driver name, vehicle name, vehicle number, and client name.
-              </div>
+          <div className="filter-panel-header">
+            <div className="filter-panel-title">
+              <Filter size={15} />
+              Filters
+              {hasActiveFilters && (
+                <span className="filter-active-badge">{Object.values(filters).filter(Boolean).length} active</span>
+              )}
             </div>
-            <div className="filter-actions">
-              <button className="ghost-btn" onClick={() => setActiveTab('trips')}>Focus Trip Logs</button>
-              <button className="clear-btn" onClick={clearFilters}>Clear Filters</button>
+            <div className="filter-panel-actions">
+              <span className="filter-results-count">
+                <span>{filteredTrips.length}</span> trips matched
+              </span>
+              <button className="ghost-btn" onClick={() => setActiveTab('trips')}>Trip Logs</button>
+              {hasActiveFilters && (
+                <button className="btn-clear-all" onClick={clearFilters}>
+                  <X size={13} /> Clear all
+                </button>
+              )}
+            </div>
+          </div>
+
+          <div className="filter-panel-body">
+            <div className="filter-grid">
+              <div className="filter-field">
+                <label><CalendarRange size={11} /> Start Date</label>
+                <div className="filter-input-wrap">
+                  <span className="f-icon"><CalendarRange size={14} /></span>
+                  <input type="date" value={filters.startDate} onChange={(e) => handleFilterChange('startDate', e.target.value)} />
+                </div>
+              </div>
+              <div className="filter-field">
+                <label><CalendarRange size={11} /> End Date</label>
+                <div className="filter-input-wrap">
+                  <span className="f-icon"><CalendarRange size={14} /></span>
+                  <input type="date" value={filters.endDate} onChange={(e) => handleFilterChange('endDate', e.target.value)} />
+                </div>
+              </div>
+              <div className="filter-field">
+                <label><User size={11} /> Driver</label>
+                <div className="filter-input-wrap">
+                  <span className="f-icon"><User size={14} /></span>
+                  <input type="text" placeholder="Search driver…" value={filters.driverName} onChange={(e) => handleFilterChange('driverName', e.target.value)} />
+                </div>
+              </div>
+              <div className="filter-field">
+                <label><Truck size={11} /> Vehicle</label>
+                <div className="filter-input-wrap">
+                  <span className="f-icon"><Truck size={14} /></span>
+                  <input type="text" placeholder="Search vehicle name…" value={filters.vehicleName} onChange={(e) => handleFilterChange('vehicleName', e.target.value)} />
+                </div>
+              </div>
+              <div className="filter-field">
+                <label><Search size={11} /> Plate No.</label>
+                <div className="filter-input-wrap">
+                  <span className="f-icon"><Search size={14} /></span>
+                  <input type="text" placeholder="e.g. KL-01…" value={filters.vehicleNumber} onChange={(e) => handleFilterChange('vehicleNumber', e.target.value)} />
+                </div>
+              </div>
+              <div className="filter-field">
+                <label><Search size={11} /> Client</label>
+                <div className="filter-input-wrap">
+                  <span className="f-icon"><Search size={14} /></span>
+                  <input type="text" placeholder="Search client…" value={filters.clientName} onChange={(e) => handleFilterChange('clientName', e.target.value)} />
+                </div>
+              </div>
             </div>
           </div>
 
-          <div className="filter-grid">
-            <div className="filter-group">
-              <label>Start Date</label>
-              <div className="filter-input-wrap">
-                <CalendarRange size={16} />
-                <input
-                  type="date"
-                  value={filters.startDate}
-                  onChange={(e) => handleFilterChange('startDate', e.target.value)}
-                />
-              </div>
-            </div>
-
-            <div className="filter-group">
-              <label>End Date</label>
-              <div className="filter-input-wrap">
-                <CalendarRange size={16} />
-                <input
-                  type="date"
-                  value={filters.endDate}
-                  onChange={(e) => handleFilterChange('endDate', e.target.value)}
-                />
-              </div>
-            </div>
-
-            <div className="filter-group">
-              <label>Driver Name</label>
-              <div className="filter-input-wrap">
-                <Search size={16} />
-                <input
-                  type="text"
-                  placeholder="Filter by driver"
-                  value={filters.driverName}
-                  onChange={(e) => handleFilterChange('driverName', e.target.value)}
-                />
-              </div>
-            </div>
-
-            <div className="filter-group">
-              <label>Vehicle Name</label>
-              <div className="filter-input-wrap">
-                <Search size={16} />
-                <input
-                  type="text"
-                  placeholder="Filter by vehicle name"
-                  value={filters.vehicleName}
-                  onChange={(e) => handleFilterChange('vehicleName', e.target.value)}
-                />
-              </div>
-            </div>
-
-            <div className="filter-group">
-              <label>Vehicle Number</label>
-              <div className="filter-input-wrap">
-                <Search size={16} />
-                <input
-                  type="text"
-                  placeholder="Filter by plate number"
-                  value={filters.vehicleNumber}
-                  onChange={(e) => handleFilterChange('vehicleNumber', e.target.value)}
-                />
-              </div>
-            </div>
-
-            <div className="filter-group">
-              <label>Client Name</label>
-              <div className="filter-input-wrap">
-                <Search size={16} />
-                <input
-                  type="text"
-                  placeholder="Filter by client/company"
-                  value={filters.clientName}
-                  onChange={(e) => handleFilterChange('clientName', e.target.value)}
-                />
-              </div>
-            </div>
-          </div>
-        </section>
-      )}
-
-      {hasActiveFilters && (
-        <div className="filter-summary">
-          {(startDate || endDate) && (
-            <div className="filter-chip">
-              <CalendarRange size={14} />
-              <span>{startDate || 'Any'} to {endDate || 'Any'}</span>
+          {hasActiveFilters && (
+            <div className="filter-chips-row">
+              <span className="filter-chips-label">Active:</span>
+              {(startDate || endDate) && (
+                <span className="filter-chip">
+                  <CalendarRange size={12} />
+                  {startDate || 'Any'} → {endDate || 'Any'}
+                  <button className="filter-chip-remove" onClick={() => { handleFilterChange('startDate',''); handleFilterChange('endDate',''); }}><X size={12} /></button>
+                </span>
+              )}
+              {filters.driverName && <span className="filter-chip"><span style={{color:'#64748b',fontWeight:600}}>Driver:</span>&nbsp;{filters.driverName}<button className="filter-chip-remove" onClick={() => handleFilterChange('driverName','')}><X size={12}/></button></span>}
+              {filters.vehicleName && <span className="filter-chip"><span style={{color:'#64748b',fontWeight:600}}>Vehicle:</span>&nbsp;{filters.vehicleName}<button className="filter-chip-remove" onClick={() => handleFilterChange('vehicleName','')}><X size={12}/></button></span>}
+              {filters.vehicleNumber && <span className="filter-chip"><span style={{color:'#64748b',fontWeight:600}}>Plate:</span>&nbsp;{filters.vehicleNumber}<button className="filter-chip-remove" onClick={() => handleFilterChange('vehicleNumber','')}><X size={12}/></button></span>}
+              {filters.clientName && <span className="filter-chip"><span style={{color:'#64748b',fontWeight:600}}>Client:</span>&nbsp;{filters.clientName}<button className="filter-chip-remove" onClick={() => handleFilterChange('clientName','')}><X size={12}/></button></span>}
             </div>
           )}
-          {filters.driverName && <div className="filter-chip">Driver: {filters.driverName}</div>}
-          {filters.vehicleName && <div className="filter-chip">Vehicle: {filters.vehicleName}</div>}
-          {filters.vehicleNumber && <div className="filter-chip">Number: {filters.vehicleNumber}</div>}
-          {filters.clientName && <div className="filter-chip">Client: {filters.clientName}</div>}
-        </div>
+        </section>
       )}
 
       <div className="stat-grid">
