@@ -17,8 +17,8 @@ const dummyHistory = [
     id: 'RN-5521',
     vehicle: 'Luxury SUV',
     image: 'https://images.unsplash.com/photo-1519641471654-76ce0107ad1b?q=80&w=800&auto=format&fit=crop',
-    date: '2024-03-15',
-    endDate: '2024-03-18',
+    date: '2026-03-15',
+    endDate: '2026-03-18',
     total: '₹12,000',
     status: 'Completed',
     hub: 'Kochi Hub'
@@ -27,8 +27,8 @@ const dummyHistory = [
     id: 'RN-3392',
     vehicle: 'Compact Hatchback',
     image: 'https://images.unsplash.com/photo-1549317661-bd32c8ce0db2?q=80&w=800&auto=format&fit=crop',
-    date: '2024-02-10',
-    endDate: '2024-02-11',
+    date: '2026-02-10',
+    endDate: '2026-02-11',
     total: '₹1,500',
     status: 'Completed',
     hub: 'Trivandrum Hub'

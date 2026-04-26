@@ -28,27 +28,59 @@ import {
   Download,
   Tag
 } from 'lucide-react'
+import { downloadCsv, exportRowsToPdf } from '../../utils/exportUtils'
+
+const createTripFilters = () => ({
+  startDate: '',
+  endDate: '',
+  driverName: '',
+  vehicleName: '',
+  vehicleNumber: '',
+  clientName: '',
+  status: '',
+})
+
+const normalizeValue = (value) => (value || '').toString().trim().toLowerCase()
+
+const includesValue = (source, target) => normalizeValue(source).includes(normalizeValue(target))
+
+const syncSeedRecords = (savedItems, seedItems, dateKeys = []) => {
+  const seedIds = new Set(seedItems.map((item) => item.id))
+  const preservedItems = savedItems.filter((item) => {
+    if (seedIds.has(item.id)) return false
+    return dateKeys.every((key) => !item[key] || String(item[key]).startsWith('2026-'))
+  })
+
+  return [...preservedItems, ...seedItems]
+}
 
 function TripManager() {
   const navigate = useNavigate()
   const [showForm, setShowForm] = useState(false)
   const [loading, setLoading] = useState(false)
   const [trips, setTrips] = useState([])
+  const [fleet, setFleet] = useState([])
   const [editingTrip, setEditingTrip] = useState(null)
   const [viewingTrip, setViewingTrip] = useState(null)
   
   // Filter States
-  const [searchTerm, setSearchTerm] = useState('')
-  const [dateFilter, setDateFilter] = useState('')
-  const [statusFilter, setStatusFilter] = useState('')
+  const [filters, setFilters] = useState(createTripFilters)
   const [selectedTrips, setSelectedTrips] = useState([])
 
   useEffect(() => {
     const savedTrips = JSON.parse(localStorage.getItem('myTrips') || '[]')
+    const savedFleet = JSON.parse(localStorage.getItem('myVehicles') || '[]')
+    const demoFleet = [
+      { id: 'V-001', name: 'Innova Crysta', plate: 'KL-01-AB-1234' },
+      { id: 'V-002', name: 'Winger', plate: 'KL-07-CD-5678' },
+      { id: 'V-003', name: 'Traveller', plate: 'KL-11-EF-9012' },
+      { id: 'V-004', name: 'Ertiga', plate: 'KL-13-GH-3456' },
+      { id: 'V-005', name: 'Dzire', plate: 'KL-05-IJ-7890' },
+    ]
     const defaults = [
       { 
         id: 'T-9842', 
-        date: '2024-04-24',
+        date: '2026-04-24',
         driverName: 'Rahul Krishnan',
         vehicleNumber: 'KL-01-AB-1234',
         companyClientName: 'Technopark Corp',
@@ -78,7 +110,7 @@ function TripManager() {
       },
       { 
         id: 'T-1025', 
-        date: '2024-04-23',
+        date: '2026-04-23',
         driverName: 'Suresh Mani',
         vehicleNumber: 'KL-07-CD-5678',
         companyClientName: 'Lulu Mall Logistics',
@@ -108,7 +140,7 @@ function TripManager() {
       },
       { 
         id: 'T-5541', 
-        date: '2024-04-22',
+        date: '2026-04-22',
         driverName: 'Abhijith P.S.',
         vehicleNumber: 'KL-11-EF-9012',
         companyClientName: 'Amazon Sort Centre',
@@ -138,7 +170,7 @@ function TripManager() {
       },
       { 
         id: 'T-2234', 
-        date: '2024-04-25',
+        date: '2026-04-25',
         driverName: 'Mohammed Fasil',
         vehicleNumber: 'KL-13-GH-3456',
         companyClientName: 'Bismi Appliances',
@@ -168,7 +200,7 @@ function TripManager() {
       },
       { 
         id: 'T-8871', 
-        date: '2024-04-21',
+        date: '2026-04-21',
         driverName: 'Vineeth Kumar',
         vehicleNumber: 'KL-05-IJ-7890',
         companyClientName: 'Private Party',
@@ -195,24 +227,212 @@ function TripManager() {
         paymentMode: 'Bank Transfer',
         tripStatus: 'Completed',
         note: 'Tourist trip'
+      },
+      {
+        id: 'T-3318',
+        date: '2026-01-12',
+        driverName: 'Rahul Krishnan',
+        vehicleNumber: 'KL-01-AB-1234',
+        companyClientName: 'Green Valley Traders',
+        fromLocation: 'Trivandrum',
+        toLocation: 'Kollam',
+        startKm: '120210',
+        endKm: '120305',
+        totalKm: '95',
+        advanceFromSuresh: '400',
+        advanceFromCompany: '900',
+        totalAdvance: '1300',
+        dieselExpense: '900',
+        maintenanceExpense: '0',
+        otherExpense: '120',
+        parkingExpense: '20',
+        tollExpense: '60',
+        foodExpense: '150',
+        driverBatta: '500',
+        totalExpense: '1750',
+        goodsRent: '4300',
+        balanceAmount: '3000',
+        profitAmount: '2550',
+        paymentStatus: 'Paid',
+        paymentMode: 'UPI',
+        tripStatus: 'Completed',
+        note: 'Early morning supply trip'
+      },
+      {
+        id: 'T-4412',
+        date: '2026-02-08',
+        driverName: 'Abhijith P.S.',
+        vehicleNumber: 'KL-11-EF-9012',
+        companyClientName: 'Metro Foods',
+        fromLocation: 'Kozhikode',
+        toLocation: 'Kannur',
+        startKm: '24110',
+        endKm: '24235',
+        totalKm: '125',
+        advanceFromSuresh: '500',
+        advanceFromCompany: '1200',
+        totalAdvance: '1700',
+        dieselExpense: '1250',
+        maintenanceExpense: '100',
+        otherExpense: '80',
+        parkingExpense: '40',
+        tollExpense: '0',
+        foodExpense: '180',
+        driverBatta: '550',
+        totalExpense: '2200',
+        goodsRent: '5200',
+        balanceAmount: '3500',
+        profitAmount: '3000',
+        paymentStatus: 'Partial',
+        paymentMode: 'Bank Transfer',
+        tripStatus: 'Completed',
+        note: 'Food distribution route'
+      },
+      {
+        id: 'T-7755',
+        date: '2026-03-17',
+        driverName: 'Suresh Mani',
+        vehicleNumber: 'KL-07-CD-5678',
+        companyClientName: 'Blue Star Agencies',
+        fromLocation: 'Ernakulam',
+        toLocation: 'Thrissur',
+        startKm: '80310',
+        endKm: '80405',
+        totalKm: '95',
+        advanceFromSuresh: '600',
+        advanceFromCompany: '1000',
+        totalAdvance: '1600',
+        dieselExpense: '980',
+        maintenanceExpense: '50',
+        otherExpense: '100',
+        parkingExpense: '30',
+        tollExpense: '70',
+        foodExpense: '200',
+        driverBatta: '600',
+        totalExpense: '2030',
+        goodsRent: '4900',
+        balanceAmount: '3300',
+        profitAmount: '2870',
+        paymentStatus: 'Paid',
+        paymentMode: 'Cash',
+        tripStatus: 'Completed',
+        note: 'Festival season delivery'
+      },
+      {
+        id: 'T-6620',
+        date: '2026-05-02',
+        driverName: 'Mohammed Fasil',
+        vehicleNumber: 'KL-13-GH-3456',
+        companyClientName: 'Classic Home Needs',
+        fromLocation: 'Palakkad',
+        toLocation: 'Thrissur',
+        startKm: '38940',
+        endKm: '39055',
+        totalKm: '115',
+        advanceFromSuresh: '700',
+        advanceFromCompany: '900',
+        totalAdvance: '1600',
+        dieselExpense: '1100',
+        maintenanceExpense: '0',
+        otherExpense: '90',
+        parkingExpense: '25',
+        tollExpense: '80',
+        foodExpense: '160',
+        driverBatta: '500',
+        totalExpense: '1955',
+        goodsRent: '5100',
+        balanceAmount: '3500',
+        profitAmount: '3145',
+        paymentStatus: 'Pending',
+        paymentMode: 'UPI',
+        tripStatus: 'Active',
+        note: 'Ongoing store replenishment'
+      },
+      {
+        id: 'T-9904',
+        date: '2026-05-18',
+        driverName: 'Vineeth Kumar',
+        vehicleNumber: 'KL-05-IJ-7890',
+        companyClientName: 'Sunrise Family Tour',
+        fromLocation: 'Kottayam',
+        toLocation: 'Munnar',
+        startKm: '66020',
+        endKm: '66175',
+        totalKm: '155',
+        advanceFromSuresh: '1200',
+        advanceFromCompany: '0',
+        totalAdvance: '1200',
+        dieselExpense: '1350',
+        maintenanceExpense: '0',
+        otherExpense: '60',
+        parkingExpense: '50',
+        tollExpense: '0',
+        foodExpense: '260',
+        driverBatta: '650',
+        totalExpense: '2370',
+        goodsRent: '6400',
+        balanceAmount: '5200',
+        profitAmount: '4030',
+        paymentStatus: 'Partial',
+        paymentMode: 'Cash',
+        tripStatus: 'Completed',
+        note: 'Weekend hill station package'
       }
     ]
-    setTrips(savedTrips.length > 0 ? savedTrips : defaults)
+    const mergedTrips = syncSeedRecords(savedTrips, defaults, ['date'])
+    const mergedFleet = syncSeedRecords(savedFleet, demoFleet)
+    localStorage.setItem('myTrips', JSON.stringify(mergedTrips))
+    localStorage.setItem('myVehicles', JSON.stringify(mergedFleet))
+    setTrips(mergedTrips)
+    setFleet(mergedFleet)
   }, [])
 
-  const filteredTrips = trips.filter(trip => {
-    const matchesSearch = 
-      trip.driverName?.toLowerCase().includes(searchTerm.toLowerCase()) || 
-      trip.vehicleNumber?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      trip.companyClientName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      trip.fromLocation?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      trip.toLocation?.toLowerCase().includes(searchTerm.toLowerCase());
-    
-    const matchesDate = dateFilter ? trip.date === dateFilter : true;
-    const matchesStatus = statusFilter ? trip.tripStatus === statusFilter : true;
-    
-    return matchesSearch && matchesDate && matchesStatus;
+  const vehicleLookup = fleet.reduce((acc, vehicle) => {
+    acc[normalizeValue(vehicle.plate)] = vehicle
+    return acc
+  }, {})
+
+  const startDate =
+    filters.startDate && filters.endDate && filters.startDate > filters.endDate
+      ? filters.endDate
+      : filters.startDate
+  const endDate =
+    filters.startDate && filters.endDate && filters.startDate > filters.endDate
+      ? filters.startDate
+      : filters.endDate
+
+  const enrichedTrips = trips.map((trip) => ({
+    ...trip,
+    vehicleName: trip.vehicleName || vehicleLookup[normalizeValue(trip.vehicleNumber)]?.name || '',
+  }))
+
+  const filteredTrips = enrichedTrips.filter((trip) => {
+    const tripDate = trip.date || ''
+    const matchesDateRange = (!startDate || tripDate >= startDate) && (!endDate || tripDate <= endDate)
+    const matchesDriver = !filters.driverName || includesValue(trip.driverName, filters.driverName) || includesValue(trip.secondaryDriverName, filters.driverName)
+    const matchesVehicleName = !filters.vehicleName || includesValue(trip.vehicleName, filters.vehicleName)
+    const matchesVehicleNumber = !filters.vehicleNumber || includesValue(trip.vehicleNumber, filters.vehicleNumber)
+    const matchesClient = !filters.clientName || includesValue(trip.companyClientName, filters.clientName)
+    const matchesStatus = !filters.status || trip.tripStatus === filters.status
+
+    return matchesDateRange && matchesDriver && matchesVehicleName && matchesVehicleNumber && matchesClient && matchesStatus
   })
+
+  const handleFilterChange = (key, value) => {
+    setFilters((current) => ({
+      ...current,
+      [key]: value,
+    }))
+  }
+
+  const clearFilters = () => {
+    setFilters(createTripFilters())
+  }
+
+  const getExportableTrips = () =>
+    selectedTrips.length > 0
+      ? filteredTrips.filter((trip) => selectedTrips.includes(trip.id))
+      : filteredTrips
 
   const toggleSelectAll = () => {
     if (selectedTrips.length === filteredTrips.length) {
@@ -322,10 +542,7 @@ function TripManager() {
 
   const handleExport = () => {
     const headers = ['Date', 'Driver', 'Vehicle', 'Client', 'From', 'To', 'Total KM', 'Diesel', 'Maint.', 'Other', 'Total Advance', 'Rent', 'Profit', 'Status'];
-    
-    const dataToExport = selectedTrips.length > 0 
-      ? trips.filter(t => selectedTrips.includes(t.id)) 
-      : filteredTrips;
+    const dataToExport = getExportableTrips()
 
     const rows = dataToExport.map(t => [
       t.date,
@@ -344,16 +561,36 @@ function TripManager() {
       t.tripStatus
     ]);
 
-    const csvContent = "data:text/csv;charset=utf-8," 
-      + [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
-    
-    const encodedUri = encodeURI(csvContent);
-    const link = document.createElement("a");
-    link.setAttribute("href", encodedUri);
-    link.setAttribute("download", `Trips_Report_${new Date().toISOString().slice(0,10)}.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    downloadCsv({
+      headers,
+      rows,
+      fileName: `Trips_Report_${new Date().toISOString().slice(0,10)}.csv`,
+    })
+  }
+
+  const handleExportPdf = () => {
+    const headers = ['Date', 'Driver', 'Vehicle', 'Client', 'From', 'To', 'Total KM', 'Diesel', 'Advance', 'Rent', 'Profit', 'Status']
+    const rows = getExportableTrips().map((trip) => [
+      trip.date,
+      trip.secondaryDriverName ? `${trip.driverName} + ${trip.secondaryDriverName}` : trip.driverName,
+      trip.vehicleNumber,
+      trip.companyClientName,
+      trip.fromLocation,
+      trip.toLocation,
+      trip.totalKm,
+      trip.dieselExpense,
+      trip.totalAdvance,
+      trip.goodsRent,
+      trip.profitAmount,
+      trip.tripStatus,
+    ])
+
+    exportRowsToPdf({
+      title: 'Trip Report',
+      headers,
+      rows,
+      fileName: `Trips_Report_${new Date().toISOString().slice(0,10)}.pdf`,
+    })
   }
 
   const handleExportSingle = (t) => {
@@ -539,33 +776,85 @@ function TripManager() {
             <button className="btn-add" onClick={() => { setEditingTrip(null); setShowForm(true); }}>
               <Plus size={22} /> Log New Trip
             </button>
-            <button className="btn-download" onClick={handleExport} style={{height: '40px', padding: '0.6rem 1.2rem', fontSize: '0.85rem'}}>
-              <Download size={16} /> {selectedTrips.length > 0 ? `Export Selected (${selectedTrips.length})` : 'Export CSV Report'}
-            </button>
+            <div style={{display:'flex', gap:'0.6rem', flexWrap:'wrap', justifyContent:'flex-end'}}>
+              <button className="btn-download" onClick={handleExport} style={{height: '40px', padding: '0.6rem 1.2rem', fontSize: '0.85rem'}}>
+                <Download size={16} /> {selectedTrips.length > 0 ? `Export CSV (${getExportableTrips().length})` : 'Export CSV'}
+              </button>
+              <button className="btn-download" onClick={handleExportPdf} style={{height: '40px', padding: '0.6rem 1.2rem', fontSize: '0.85rem'}}>
+                <FileText size={16} /> {selectedTrips.length > 0 ? `Export PDF (${getExportableTrips().length})` : 'Export PDF'}
+              </button>
+            </div>
           </div>
         </header>
 
         <div className="filter-bar">
           <div className="filter-group">
-            <label><Search size={14} /> Search Records</label>
+            <label><Calendar size={14} /> Start Date</label>
             <div className="filter-input-wrap">
-              <Search size={18} />
-              <input 
-                type="text" 
-                placeholder="Driver, vehicle or route..." 
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
+              <Calendar size={18} />
+              <input
+                type="date"
+                value={filters.startDate}
+                onChange={(e) => handleFilterChange('startDate', e.target.value)}
               />
             </div>
           </div>
           <div className="filter-group">
-            <label><Calendar size={14} /> Trip Date</label>
+            <label><Calendar size={14} /> End Date</label>
             <div className="filter-input-wrap">
               <Calendar size={18} />
-              <input 
-                type="date" 
-                value={dateFilter}
-                onChange={(e) => setDateFilter(e.target.value)}
+              <input
+                type="date"
+                value={filters.endDate}
+                onChange={(e) => handleFilterChange('endDate', e.target.value)}
+              />
+            </div>
+          </div>
+          <div className="filter-group">
+            <label><Search size={14} /> Driver Name</label>
+            <div className="filter-input-wrap">
+              <Search size={18} />
+              <input
+                type="text"
+                placeholder="Filter by driver"
+                value={filters.driverName}
+                onChange={(e) => handleFilterChange('driverName', e.target.value)}
+              />
+            </div>
+          </div>
+          <div className="filter-group">
+            <label><Search size={14} /> Vehicle Name</label>
+            <div className="filter-input-wrap">
+              <Search size={18} />
+              <input
+                type="text"
+                placeholder="Filter by vehicle name"
+                value={filters.vehicleName}
+                onChange={(e) => handleFilterChange('vehicleName', e.target.value)}
+              />
+            </div>
+          </div>
+          <div className="filter-group">
+            <label><Search size={14} /> Vehicle Number</label>
+            <div className="filter-input-wrap">
+              <Search size={18} />
+              <input
+                type="text"
+                placeholder="Filter by vehicle number"
+                value={filters.vehicleNumber}
+                onChange={(e) => handleFilterChange('vehicleNumber', e.target.value)}
+              />
+            </div>
+          </div>
+          <div className="filter-group">
+            <label><Search size={14} /> Client Name</label>
+            <div className="filter-input-wrap">
+              <Search size={18} />
+              <input
+                type="text"
+                placeholder="Filter by client or company"
+                value={filters.clientName}
+                onChange={(e) => handleFilterChange('clientName', e.target.value)}
               />
             </div>
           </div>
@@ -573,7 +862,7 @@ function TripManager() {
             <label><Filter size={14} /> Status</label>
             <div className="filter-input-wrap">
               <Filter size={18} />
-              <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
+              <select value={filters.status} onChange={(e) => handleFilterChange('status', e.target.value)}>
                 <option value="">All Statuses</option>
                 <option value="Completed">Completed</option>
                 <option value="Active">Active</option>
@@ -581,7 +870,7 @@ function TripManager() {
               </select>
             </div>
           </div>
-          <button className="btn-clear" onClick={() => { setSearchTerm(''); setDateFilter(''); setStatusFilter(''); }}>Clear</button>
+          <button className="btn-clear" onClick={clearFilters}>Clear</button>
         </div>
 
         <div className="table-card">

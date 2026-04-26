@@ -190,7 +190,7 @@ function VehicleDetailPage() {
                 <div className="review-avatar">A</div>
                 <div>
                   <div className="review-author">Anand K.</div>
-                  <div className="review-date">March 2024</div>
+                  <div className="review-date">March 2026</div>
                 </div>
                 <div className="review-stars">
                   {[...Array(5)].map((_, i) => <Star key={i} size={12} fill="#fbbf24" color="#fbbf24" />)}

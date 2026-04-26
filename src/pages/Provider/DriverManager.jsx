@@ -21,23 +21,57 @@ import {
   Filter,
   Download
 } from 'lucide-react'
+import { downloadCsv, exportRowsToPdf } from '../../utils/exportUtils'
+
+const createDriverFilters = () => ({
+  startDate: '',
+  endDate: '',
+  driverName: '',
+  vehicleName: '',
+  vehicleNumber: '',
+  clientName: '',
+  status: '',
+})
+
+const normalizeValue = (value) => (value || '').toString().trim().toLowerCase()
+
+const includesValue = (source, target) => normalizeValue(source).includes(normalizeValue(target))
+
+const syncSeedRecords = (savedItems, seedItems, dateKeys = []) => {
+  const seedIds = new Set(seedItems.map((item) => item.id))
+  const preservedItems = savedItems.filter((item) => {
+    if (seedIds.has(item.id)) return false
+    return dateKeys.every((key) => !item[key] || String(item[key]).startsWith('2026-'))
+  })
+
+  return [...preservedItems, ...seedItems]
+}
 
 function DriverManager() {
   const navigate = useNavigate()
   const [showForm, setShowForm] = useState(false)
   const [loading, setLoading] = useState(false)
   const [drivers, setDrivers] = useState([])
+  const [trips, setTrips] = useState([])
+  const [fleet, setFleet] = useState([])
   const [editingDriver, setEditingDriver] = useState(null)
   const [viewingDriver, setViewingDriver] = useState(null)
 
   // Filter States
-  const [searchTerm, setSearchTerm] = useState('')
-  const [dateFilter, setDateFilter] = useState('')
-  const [statusFilter, setStatusFilter] = useState('')
+  const [filters, setFilters] = useState(createDriverFilters)
   const [selectedDrivers, setSelectedDrivers] = useState([])
 
   useEffect(() => {
     const savedDrivers = JSON.parse(localStorage.getItem('myDrivers') || '[]')
+    const savedTrips = JSON.parse(localStorage.getItem('myTrips') || '[]')
+    const savedFleet = JSON.parse(localStorage.getItem('myVehicles') || '[]')
+    const demoFleet = [
+      { id: 'V-001', name: 'Innova Crysta', plate: 'KL-01-AB-1234' },
+      { id: 'V-002', name: 'Winger', plate: 'KL-07-CD-5678' },
+      { id: 'V-003', name: 'Traveller', plate: 'KL-11-EF-9012' },
+      { id: 'V-004', name: 'Ertiga', plate: 'KL-13-GH-3456' },
+      { id: 'V-005', name: 'Dzire', plate: 'KL-05-IJ-7890' },
+    ]
     const defaults = [
       { 
         id: 'D-001', 
@@ -49,7 +83,7 @@ function DriverManager() {
         address: '123, Green Villa, Trivandrum',
         driverType: 'Full-time',
         dailyBatta: '500',
-        joiningDate: '2023-01-15',
+        joiningDate: '2026-01-15',
         status: 'Approved',
         notes: 'Experienced in long routes'
       },
@@ -59,11 +93,11 @@ function DriverManager() {
         phone: '+91 98450 54321', 
         alternateNumber: '',
         license: 'KL07 20180045', 
-        licenseExpiryDate: '2025-05-20',
+        licenseExpiryDate: '2026-05-20',
         address: '45, Sea Side, Kochi',
         driverType: 'Contract',
         dailyBatta: '600',
-        joiningDate: '2023-06-10',
+        joiningDate: '2026-06-10',
         status: 'Approved',
         notes: ''
       },
@@ -77,7 +111,7 @@ function DriverManager() {
         address: 'Near Temple, Kozhikode',
         driverType: 'Full-time',
         dailyBatta: '550',
-        joiningDate: '2024-02-01',
+        joiningDate: '2026-02-01',
         status: 'Approved',
         notes: 'Very punctual'
       },
@@ -87,11 +121,11 @@ function DriverManager() {
         phone: '+91 88990 44332', 
         alternateNumber: '',
         license: 'KL13 20190023', 
-        licenseExpiryDate: '2027-08-15',
+        licenseExpiryDate: '2026-08-15',
         address: 'Fasil Manzil, Malappuram',
         driverType: 'Full-time',
         dailyBatta: '500',
-        joiningDate: '2022-11-20',
+        joiningDate: '2026-04-20',
         status: 'Active',
         notes: 'Expert in heavy vehicles'
       },
@@ -105,25 +139,95 @@ function DriverManager() {
         address: 'Vineeth Bhavan, Kottayam',
         driverType: 'Contract',
         dailyBatta: '650',
-        joiningDate: '2024-03-15',
+        joiningDate: '2026-03-15',
         status: 'Pending',
         notes: 'New joinee'
       }
     ]
-    setDrivers(savedDrivers.length > 0 ? savedDrivers : defaults)
+    const demoTrips = [
+      { id: 'T-3318', date: '2026-01-12', driverName: 'Rahul Krishnan', vehicleNumber: 'KL-01-AB-1234', companyClientName: 'Green Valley Traders' },
+      { id: 'T-4412', date: '2026-02-08', driverName: 'Abhijith P.S.', vehicleNumber: 'KL-11-EF-9012', companyClientName: 'Metro Foods' },
+      { id: 'T-7755', date: '2026-03-17', driverName: 'Suresh Mani', vehicleNumber: 'KL-07-CD-5678', companyClientName: 'Blue Star Agencies' },
+      { id: 'T-8871', date: '2026-04-21', driverName: 'Vineeth Kumar', vehicleNumber: 'KL-05-IJ-7890', companyClientName: 'Private Party' },
+      { id: 'T-2234', date: '2026-04-25', driverName: 'Mohammed Fasil', vehicleNumber: 'KL-13-GH-3456', companyClientName: 'Bismi Appliances' },
+      { id: 'T-6620', date: '2026-05-02', driverName: 'Mohammed Fasil', vehicleNumber: 'KL-13-GH-3456', companyClientName: 'Classic Home Needs' },
+      { id: 'T-9904', date: '2026-05-18', driverName: 'Vineeth Kumar', vehicleNumber: 'KL-05-IJ-7890', companyClientName: 'Sunrise Family Tour' },
+    ]
+    const mergedDrivers = syncSeedRecords(savedDrivers, defaults, ['joiningDate'])
+    const mergedTrips = syncSeedRecords(savedTrips, demoTrips, ['date'])
+    const mergedFleet = syncSeedRecords(savedFleet, demoFleet)
+    localStorage.setItem('myDrivers', JSON.stringify(mergedDrivers))
+    localStorage.setItem('myTrips', JSON.stringify(mergedTrips))
+    localStorage.setItem('myVehicles', JSON.stringify(mergedFleet))
+    setDrivers(mergedDrivers)
+    setTrips(mergedTrips)
+    setFleet(mergedFleet)
   }, [])
 
-  const filteredDrivers = drivers.filter(driver => {
-    const matchesSearch = 
-      driver.name?.toLowerCase().includes(searchTerm.toLowerCase()) || 
-      driver.phone?.includes(searchTerm) ||
-      driver.license?.toLowerCase().includes(searchTerm.toLowerCase());
-    
-    const matchesDate = dateFilter ? driver.joiningDate === dateFilter : true;
-    const matchesStatus = statusFilter ? driver.status === statusFilter : true;
-    
-    return matchesSearch && matchesStatus && matchesDate;
+  const vehicleLookup = fleet.reduce((acc, vehicle) => {
+    acc[normalizeValue(vehicle.plate)] = vehicle
+    return acc
+  }, {})
+
+  const startDate =
+    filters.startDate && filters.endDate && filters.startDate > filters.endDate
+      ? filters.endDate
+      : filters.startDate
+  const endDate =
+    filters.startDate && filters.endDate && filters.startDate > filters.endDate
+      ? filters.startDate
+      : filters.endDate
+
+  const tripScopedFilteringActive = Boolean(
+    startDate || endDate || filters.vehicleName || filters.vehicleNumber || filters.clientName || filters.driverName
+  )
+
+  const matchingDriverNames = new Set(
+    trips
+      .map((trip) => ({
+        ...trip,
+        vehicleName: trip.vehicleName || vehicleLookup[normalizeValue(trip.vehicleNumber)]?.name || '',
+      }))
+      .filter((trip) => {
+        const tripDate = trip.date || ''
+        const matchesDateRange = (!startDate || tripDate >= startDate) && (!endDate || tripDate <= endDate)
+        const matchesDriver = !filters.driverName || includesValue(trip.driverName, filters.driverName) || includesValue(trip.secondaryDriverName, filters.driverName)
+        const matchesVehicleName = !filters.vehicleName || includesValue(trip.vehicleName, filters.vehicleName)
+        const matchesVehicleNumber = !filters.vehicleNumber || includesValue(trip.vehicleNumber, filters.vehicleNumber)
+        const matchesClient = !filters.clientName || includesValue(trip.companyClientName, filters.clientName)
+
+        return matchesDateRange && matchesDriver && matchesVehicleName && matchesVehicleNumber && matchesClient
+      })
+      .flatMap((trip) => [trip.driverName, trip.secondaryDriverName].filter(Boolean).map(normalizeValue))
+  )
+
+  const filteredDrivers = drivers.filter((driver) => {
+    const matchesStatus = !filters.status || driver.status === filters.status
+    const matchesDriverText =
+      !filters.driverName ||
+      includesValue(driver.name, filters.driverName) ||
+      includesValue(driver.phone, filters.driverName) ||
+      includesValue(driver.license, filters.driverName)
+    const matchesTripScope = !tripScopedFilteringActive || matchingDriverNames.has(normalizeValue(driver.name))
+
+    return matchesStatus && matchesDriverText && matchesTripScope
   })
+
+  const handleFilterChange = (key, value) => {
+    setFilters((current) => ({
+      ...current,
+      [key]: value,
+    }))
+  }
+
+  const clearFilters = () => {
+    setFilters(createDriverFilters())
+  }
+
+  const getExportableDrivers = () =>
+    selectedDrivers.length > 0
+      ? filteredDrivers.filter((driver) => selectedDrivers.includes(driver.id))
+      : filteredDrivers
 
   const toggleSelectAll = () => {
     if (selectedDrivers.length === filteredDrivers.length) {
@@ -194,10 +298,7 @@ function DriverManager() {
 
   const handleExport = () => {
     const headers = ['Name', 'Phone', 'License', 'License Exp', 'Joining Date', 'Type', 'Batta', 'Status'];
-    
-    const dataToExport = selectedDrivers.length > 0 
-      ? drivers.filter(d => selectedDrivers.includes(d.id)) 
-      : filteredDrivers;
+    const dataToExport = getExportableDrivers()
 
     const rows = dataToExport.map(d => [
       d.name,
@@ -210,16 +311,32 @@ function DriverManager() {
       d.status
     ]);
 
-    const csvContent = "data:text/csv;charset=utf-8," 
-      + [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
-    
-    const encodedUri = encodeURI(csvContent);
-    const link = document.createElement("a");
-    link.setAttribute("href", encodedUri);
-    link.setAttribute("download", `Drivers_Report_${new Date().toISOString().slice(0,10)}.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    downloadCsv({
+      headers,
+      rows,
+      fileName: `Drivers_Report_${new Date().toISOString().slice(0,10)}.csv`,
+    })
+  }
+
+  const handleExportPdf = () => {
+    const headers = ['Name', 'Phone', 'License', 'License Expiry', 'Joining Date', 'Driver Type', 'Daily Batta', 'Status']
+    const rows = getExportableDrivers().map((driver) => [
+      driver.name,
+      driver.phone,
+      driver.license,
+      driver.licenseExpiryDate,
+      driver.joiningDate,
+      driver.driverType,
+      driver.dailyBatta,
+      driver.status,
+    ])
+
+    exportRowsToPdf({
+      title: 'Driver Report',
+      headers,
+      rows,
+      fileName: `Drivers_Report_${new Date().toISOString().slice(0,10)}.pdf`,
+    })
   }
 
   const handleExportSingle = (d) => {
@@ -369,33 +486,85 @@ function DriverManager() {
             <button className="btn-add" onClick={() => { setEditingDriver(null); setShowForm(true); }}>
               <Plus size={22} /> Add New Driver
             </button>
-            <button className="btn-download" onClick={handleExport} style={{height: '40px', padding: '0.6rem 1.2rem', fontSize: '0.85rem'}}>
-              <Download size={16} /> {selectedDrivers.length > 0 ? `Export Selected (${selectedDrivers.length})` : 'Export CSV Report'}
-            </button>
+            <div style={{display:'flex', gap:'0.6rem', flexWrap:'wrap', justifyContent:'flex-end'}}>
+              <button className="btn-download" onClick={handleExport} style={{height: '40px', padding: '0.6rem 1.2rem', fontSize: '0.85rem'}}>
+                <Download size={16} /> {selectedDrivers.length > 0 ? `Export CSV (${getExportableDrivers().length})` : 'Export CSV'}
+              </button>
+              <button className="btn-download" onClick={handleExportPdf} style={{height: '40px', padding: '0.6rem 1.2rem', fontSize: '0.85rem'}}>
+                <FileText size={16} /> {selectedDrivers.length > 0 ? `Export PDF (${getExportableDrivers().length})` : 'Export PDF'}
+              </button>
+            </div>
           </div>
         </header>
 
         <div className="filter-bar">
           <div className="filter-group">
-            <label><Search size={14} /> Search Drivers</label>
+            <label><Calendar size={14} /> Start Date</label>
             <div className="filter-input-wrap">
-              <Search size={18} />
-              <input 
-                type="text" 
-                placeholder="Name, phone or license..." 
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
+              <Calendar size={18} />
+              <input
+                type="date"
+                value={filters.startDate}
+                onChange={(e) => handleFilterChange('startDate', e.target.value)}
               />
             </div>
           </div>
           <div className="filter-group">
-            <label><Calendar size={14} /> Joining Date</label>
+            <label><Calendar size={14} /> End Date</label>
             <div className="filter-input-wrap">
               <Calendar size={18} />
-              <input 
-                type="date" 
-                value={dateFilter}
-                onChange={(e) => setDateFilter(e.target.value)}
+              <input
+                type="date"
+                value={filters.endDate}
+                onChange={(e) => handleFilterChange('endDate', e.target.value)}
+              />
+            </div>
+          </div>
+          <div className="filter-group">
+            <label><Search size={14} /> Driver Name</label>
+            <div className="filter-input-wrap">
+              <Search size={18} />
+              <input
+                type="text"
+                placeholder="Name, phone, or license"
+                value={filters.driverName}
+                onChange={(e) => handleFilterChange('driverName', e.target.value)}
+              />
+            </div>
+          </div>
+          <div className="filter-group">
+            <label><Search size={14} /> Vehicle Name</label>
+            <div className="filter-input-wrap">
+              <Search size={18} />
+              <input
+                type="text"
+                placeholder="Filter by linked vehicle name"
+                value={filters.vehicleName}
+                onChange={(e) => handleFilterChange('vehicleName', e.target.value)}
+              />
+            </div>
+          </div>
+          <div className="filter-group">
+            <label><Search size={14} /> Vehicle Number</label>
+            <div className="filter-input-wrap">
+              <Search size={18} />
+              <input
+                type="text"
+                placeholder="Filter by linked vehicle number"
+                value={filters.vehicleNumber}
+                onChange={(e) => handleFilterChange('vehicleNumber', e.target.value)}
+              />
+            </div>
+          </div>
+          <div className="filter-group">
+            <label><Search size={14} /> Client Name</label>
+            <div className="filter-input-wrap">
+              <Search size={18} />
+              <input
+                type="text"
+                placeholder="Filter by linked client"
+                value={filters.clientName}
+                onChange={(e) => handleFilterChange('clientName', e.target.value)}
               />
             </div>
           </div>
@@ -403,7 +572,7 @@ function DriverManager() {
             <label><Filter size={14} /> Status</label>
             <div className="filter-input-wrap">
               <Filter size={18} />
-              <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
+              <select value={filters.status} onChange={(e) => handleFilterChange('status', e.target.value)}>
                 <option value="">All Statuses</option>
                 <option value="Approved">Approved</option>
                 <option value="Pending">Pending</option>
@@ -412,7 +581,7 @@ function DriverManager() {
               </select>
             </div>
           </div>
-          <button className="btn-clear" onClick={() => { setSearchTerm(''); setDateFilter(''); setStatusFilter(''); }}>Clear</button>
+          <button className="btn-clear" onClick={clearFilters}>Clear</button>
         </div>
 
         <div className="table-card">
